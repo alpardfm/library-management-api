@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"library-management-api/pkg/auth"
+	"github.com/alpardfm/library-management-api/pkg/auth"
 )
 
 func TestGenerateAndValidateToken(t *testing.T) {

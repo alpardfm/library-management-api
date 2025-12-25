@@ -2,8 +2,9 @@
 package repository_test
 
 import (
-	"library-management-api/internal/models"
 	"testing"
+
+	"github.com/alpardfm/library-management-api/internal/models"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/internal/repository"
 )
 
 func TestBookRepository_Create(t *testing.T) {

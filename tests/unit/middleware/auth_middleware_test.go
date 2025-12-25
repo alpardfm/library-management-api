@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"library-management-api/internal/middleware"
+	"github.com/alpardfm/library-management-api/internal/middleware"
 )
 
 func TestAuthMiddleware(t *testing.T) {

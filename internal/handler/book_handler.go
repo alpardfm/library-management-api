@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"library-management-api/internal/dto"
-	"library-management-api/internal/service"
+	"github.com/alpardfm/library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

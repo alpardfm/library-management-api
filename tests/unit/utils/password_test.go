@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"library-management-api/pkg/utils"
+	"github.com/alpardfm/library-management-api/pkg/utils"
 )
 
 func TestHashPassword(t *testing.T) {

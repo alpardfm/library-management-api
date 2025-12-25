@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 
-	"library-management-api/internal/dto"
-	"library-management-api/internal/models"
-	"library-management-api/pkg/database"
+	"github.com/alpardfm/library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/pkg/database"
 )
 
 type APIIntegrationTestSuite struct {

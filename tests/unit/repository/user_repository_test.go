@@ -11,8 +11,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"library-management-api/internal/models"
-	"library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/internal/repository"
 )
 
 func TestUserRepository_Create(t *testing.T) {

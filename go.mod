@@ -1,4 +1,4 @@
-module library-management-api
+module github.com/alpardfm/library-management-api
 
 go 1.24.4
 

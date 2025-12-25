@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"library-management-api/internal/dto"
-	"library-management-api/internal/models"
-	"library-management-api/internal/repository"
-	"library-management-api/pkg/auth"
+	"github.com/alpardfm/library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/pkg/auth"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"

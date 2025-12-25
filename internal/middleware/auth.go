@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"library-management-api/pkg/auth"
+	"github.com/alpardfm/library-management-api/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 )

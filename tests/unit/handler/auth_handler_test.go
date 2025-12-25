@@ -5,18 +5,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"library-management-api/pkg/auth"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/alpardfm/library-management-api/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"library-management-api/internal/dto"
-	"library-management-api/internal/handler"
-	"library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/handler"
+	"github.com/alpardfm/library-management-api/internal/models"
 )
 
 type MockAuthService struct {

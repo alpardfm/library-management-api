@@ -3,10 +3,11 @@ package database
 
 import (
 	"fmt"
-	"library-management-api/internal/models"
 	"log"
 	"os"
 	"time"
+
+	"github.com/alpardfm/library-management-api/internal/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

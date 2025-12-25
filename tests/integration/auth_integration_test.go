@@ -8,8 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"library-management-api/internal/dto"
-	"library-management-api/pkg/database"
+	"github.com/alpardfm/library-management-api/pkg/database"
+
+	"github.com/alpardfm/library-management-api/internal/dto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

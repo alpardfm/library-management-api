@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
-	"library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/dto"
 )
 
 type LibraryE2ETestSuite struct {

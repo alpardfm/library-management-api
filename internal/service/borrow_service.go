@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"library-management-api/internal/dto"
-	"library-management-api/internal/models"
-	"library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/internal/dto"
+	"github.com/alpardfm/library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/internal/repository"
 )
 
 type BorrowService interface {

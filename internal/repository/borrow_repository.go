@@ -4,7 +4,7 @@ package repository
 import (
 	"time"
 
-	"library-management-api/internal/models"
+	"github.com/alpardfm/library-management-api/internal/models"
 
 	"gorm.io/gorm"
 )

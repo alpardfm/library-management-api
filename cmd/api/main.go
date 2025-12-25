@@ -14,12 +14,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 
-	"library-management-api/configs"
-	"library-management-api/internal/handler"
-	"library-management-api/internal/middleware"
-	"library-management-api/internal/repository"
-	"library-management-api/internal/service"
-	"library-management-api/pkg/database"
+	"github.com/alpardfm/library-management-api/configs"
+	"github.com/alpardfm/library-management-api/internal/handler"
+	"github.com/alpardfm/library-management-api/internal/middleware"
+	"github.com/alpardfm/library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/internal/service"
+	"github.com/alpardfm/library-management-api/pkg/database"
 )
 
 func main() {
