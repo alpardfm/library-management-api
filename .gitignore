@@ -14,6 +14,10 @@ bin/
 
 # Dependency directories
 vendor/
+dummy/
+scripts/
+migrations/
+.github/
 
 # Environment variables
 .env
@@ -31,7 +35,3 @@ Thumbs.db
 coverage.html
 test-report.json
 golangci-report.json
-
-dummy/
-scripts/
-migrations/
