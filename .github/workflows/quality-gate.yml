@@ -1,0 +1,110 @@
+# .github/workflows/quality-gate.yml
+name: Quality Gate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: library_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+    
+    - name: Install dependencies
+      run: |
+        go mod download
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    
+    - name: Run unit tests
+      run: |
+        go test ./internal/... -v -coverprofile=coverage.out -covermode=atomic
+        
+        # Check coverage
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        echo "Coverage: ${COVERAGE}%"
+        
+        # Fail if coverage below 90%
+        if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+          echo "❌ Coverage below 90%"
+          exit 1
+        fi
+        
+        # Generate HTML report
+        go tool cover -html=coverage.out -o coverage.html
+    
+    - name: Run integration tests
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: postgres
+        DB_PASSWORD: password
+        DB_NAME: library_test
+      run: |
+        go test ./tests/integration/... -v
+    
+    - name: Run linter
+      run: |
+        golangci-lint run --timeout=5m
+    
+    - name: Check for race conditions
+      run: |
+        go test ./... -race
+    
+    - name: Generate test report
+      run: |
+        go test ./... -json > test-report.json 2>/dev/null || true
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          coverage.out
+          coverage.html
+          test-report.json
+    
+    - name: SonarQube Scan
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      with:
+        args: >
+          -Dsonar.qualitygate.wait=true
+          -Dsonar.qualitygate.timeout=600
+    
+    - name: Notify on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#ci-alerts'
+        username: 'CI Bot'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

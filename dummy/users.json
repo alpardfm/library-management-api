@@ -1,0 +1,628 @@
+[
+  {
+    "id": 1,
+    "username": "alex_johnson",
+    "email": "alex.johnson@email.com",
+    "password": "securePass123!",
+    "role": "member"
+  },
+  {
+    "id": 2,
+    "username": "sarah_connor",
+    "email": "sarah.connor@email.com",
+    "password": "terminator2024",
+    "role": "librarian"
+  },
+  {
+    "username": "mike_wheeler",
+    "email": "mike.w@email.com",
+    "password": "strangerThings1",
+    "role": "member"
+  },
+  {
+    "username": "linda_carter",
+    "email": "linda.c@email.com",
+    "password": "wonderWoman99",
+    "role": "librarian"
+  },
+  {
+    "username": "ryan_smith",
+    "email": "ryan.smith@email.com",
+    "password": "BlueSky#45",
+    "role": "member"
+  },
+  {
+    "username": "nina_patel",
+    "email": "nina.patel@email.com",
+    "password": "Delhi@2024",
+    "role": "member"
+  },
+  {
+    "username": "carlos_mendoza",
+    "email": "carlos.m@email.com",
+    "password": "Futbol2024!",
+    "role": "member"
+  },
+  {
+    "username": "admin_chief",
+    "email": "admin.library@email.com",
+    "password": "LibAdmin$ecure1",
+    "role": "librarian"
+  },
+  {
+    "username": "chloe_king",
+    "email": "chloe.k@email.com",
+    "password": "BookWorm#2024",
+    "role": "member"
+  },
+  {
+    "username": "kenji_tanaka",
+    "email": "kenji.t@email.com",
+    "password": "Tokyo@2024",
+    "role": "member"
+  },
+  {
+    "username": "olivia_wilde",
+    "email": "olivia.w@email.com",
+    "password": "Actress$123",
+    "role": "member"
+  },
+  {
+    "username": "librarian_prime",
+    "email": "prime.lib@email.com",
+    "password": "MasterLib#001",
+    "role": "librarian"
+  },
+  {
+    "username": "david_bowie",
+    "email": "david.b@email.com",
+    "password": "Starman1972!",
+    "role": "member"
+  },
+  {
+    "username": "sophia_rose",
+    "email": "sophia.r@email.com",
+    "password": "RosesAreRed$",
+    "role": "member"
+  },
+  {
+    "username": "ahmed_khan",
+    "email": "ahmed.k@email.com",
+    "password": "Karachi@1234",
+    "role": "member"
+  },
+  {
+    "username": "elena_gilbert",
+    "email": "elena.g@email.com",
+    "password": "VampireDiaries1",
+    "role": "member"
+  },
+  {
+    "username": "lib_manager",
+    "email": "manager.lib@email.com",
+    "password": "ManageLib$2024",
+    "role": "librarian"
+  },
+  {
+    "username": "jamie_fox",
+    "email": "jamie.f@email.com",
+    "password": "Ray2004!",
+    "role": "member"
+  },
+  {
+    "username": "zara_ali",
+    "email": "zara.a@email.com",
+    "password": "Fashion@2024",
+    "role": "member"
+  },
+  {
+    "username": "leo_messi",
+    "email": "leo.m@email.com",
+    "password": "Goat10$2022",
+    "role": "member"
+  },
+  {
+    "username": "second_librarian",
+    "email": "second.lib@email.com",
+    "password": "SecondLib@2024",
+    "role": "librarian"
+  },
+  {
+    "username": "maya_angelou",
+    "email": "maya.a@email.com",
+    "password": "Poetry$Life1",
+    "role": "member"
+  },
+  {
+    "username": "jack_sparrow",
+    "email": "jack.s@email.com",
+    "password": "Pirates!123",
+    "role": "member"
+  },
+  {
+    "username": "susan_cole",
+    "email": "susan.c@email.com",
+    "password": "Teacher2024!",
+    "role": "member"
+  },
+  {
+    "username": "lib_support",
+    "email": "support.lib@email.com",
+    "password": "Support$Lib1",
+    "role": "librarian"
+  },
+  {
+    "username": "bruce_wayne",
+    "email": "bruce.w@email.com",
+    "password": "IamBatman!",
+    "role": "member"
+  },
+  {
+    "username": "luna_lovegood",
+    "email": "luna.l@email.com",
+    "password": "Nargles$2024",
+    "role": "member"
+  },
+  {
+    "username": "tony_stark",
+    "email": "tony.s@email.com",
+    "password": "IronMan3000",
+    "role": "member"
+  },
+  {
+    "username": "maria_garcia",
+    "email": "maria.g@email.com",
+    "password": "Barcelona@1",
+    "role": "member"
+  },
+  {
+    "username": "night_librarian",
+    "email": "night.lib@email.com",
+    "password": "NightShift$1",
+    "role": "librarian"
+  },
+  {
+    "username": "peter_parker",
+    "email": "peter.p@email.com",
+    "password": "SpideySense1",
+    "role": "member"
+  },
+  {
+    "username": "clark_kent",
+    "email": "clark.k@email.com",
+    "password": "Superman1938",
+    "role": "member"
+  },
+  {
+    "username": "diana_prince",
+    "email": "diana.p@email.com",
+    "password": "Themyscira1",
+    "role": "member"
+  },
+  {
+    "username": "weekend_lib",
+    "email": "weekend.lib@email.com",
+    "password": "Weekend@2024",
+    "role": "librarian"
+  },
+  {
+    "username": "harry_potter",
+    "email": "harry.p@email.com",
+    "password": "Expelliarmus1",
+    "role": "member"
+  },
+  {
+    "username": "hermione_granger",
+    "email": "hermione.g@email.com",
+    "password": "Leviosa$2024",
+    "role": "member"
+  },
+  {
+    "username": "ron_weasley",
+    "email": "ron.w@email.com",
+    "password": "Scabbers2024",
+    "role": "member"
+  },
+  {
+    "username": "lib_deputy",
+    "email": "deputy.lib@email.com",
+    "password": "Deputy$Secure1",
+    "role": "librarian"
+  },
+  {
+    "username": "frodo_baggins",
+    "email": "frodo.b@email.com",
+    "password": "OneRing$2024",
+    "role": "member"
+  },
+  {
+    "username": "samwise_gamgee",
+    "email": "samwise.g@email.com",
+    "password": "Potatoes!123",
+    "role": "member"
+  },
+  {
+    "username": "gandalf_grey",
+    "email": "gandalf.g@email.com",
+    "password": "YouShallNotPass",
+    "role": "member"
+  },
+  {
+    "username": "archivist_main",
+    "email": "archivist.lib@email.com",
+    "password": "Archive$Master1",
+    "role": "librarian"
+  },
+  {
+    "username": "aragorn_elessar",
+    "email": "aragorn.e@email.com",
+    "password": "KingGondor2024",
+    "role": "member"
+  },
+  {
+    "username": "legolas_greenleaf",
+    "email": "legolas.g@email.com",
+    "password": "ElfArcher$1",
+    "role": "member"
+  },
+  {
+    "username": "gimli_sonofgloin",
+    "email": "gimli.s@email.com",
+    "password": "AndMyAxe!123",
+    "role": "member"
+  },
+  {
+    "username": "lib_intern",
+    "email": "intern.lib@email.com",
+    "password": "Intern$Lib2024",
+    "role": "librarian"
+  },
+  {
+    "username": "jon_snow",
+    "email": "jon.s@email.com",
+    "password": "WinterIsComing",
+    "role": "member"
+  },
+  {
+    "username": "daenerys_t",
+    "email": "daenerys.t@email.com",
+    "password": "DragonMother1",
+    "role": "member"
+  },
+  {
+    "username": "tyrion_lannister",
+    "email": "tyrion.l@email.com",
+    "password": "DrinkAndKnow$",
+    "role": "member"
+  },
+  {
+    "username": "catalog_specialist",
+    "email": "catalog.lib@email.com",
+    "password": "Catalog$2024",
+    "role": "librarian"
+  },
+  {
+    "username": "arya_stark",
+    "email": "arya.s@email.com",
+    "password": "ValarMorghulis",
+    "role": "member"
+  },
+  {
+    "username": "sansa_stark",
+    "email": "sansa.s@email.com",
+    "password": "QueenNorth2024",
+    "role": "member"
+  },
+  {
+    "username": "bran_stark",
+    "email": "bran.s@email.com",
+    "password": "ThreeEyedRaven",
+    "role": "member"
+  },
+  {
+    "username": "digital_lib",
+    "email": "digital.lib@email.com",
+    "password": "Digital$Lib1",
+    "role": "librarian"
+  },
+  {
+    "username": "cersei_lannister",
+    "email": "cersei.l@email.com",
+    "password": "ShameShame2024",
+    "role": "member"
+  },
+  {
+    "username": "jaime_lannister",
+    "email": "jaime.l@email.com",
+    "password": "Kingslayer1",
+    "role": "member"
+  },
+  {
+    "username": "brienne_tarth",
+    "email": "brienne.t@email.com",
+    "password": "Oathkeeper$",
+    "role": "member"
+  },
+  {
+    "username": "children_lib",
+    "email": "children.lib@email.com",
+    "password": "KidsSection$1",
+    "role": "librarian"
+  },
+  {
+    "username": "joffrey_baratheon",
+    "email": "joffrey.b@email.com",
+    "password": "KingJoffrey123",
+    "role": "member"
+  },
+  {
+    "username": "tywin_lannister",
+    "email": "tywin.l@email.com",
+    "password": "LannisterPay$",
+    "role": "member"
+  },
+  {
+    "username": "margaery_tyrell",
+    "email": "margaery.t@email.com",
+    "password": "RoseHighgarden",
+    "role": "member"
+  },
+  {
+    "username": "acquisitions_lib",
+    "email": "acquisitions.lib@email.com",
+    "password": "Acquire$Books1",
+    "role": "librarian"
+  },
+  {
+    "username": "oberyn_martell",
+    "email": "oberyn.m@email.com",
+    "password": "ViperDorne2024",
+    "role": "member"
+  },
+  {
+    "username": "ellaria_sand",
+    "email": "ellaria.s@email.com",
+    "password": "SandSnakes$1",
+    "role": "member"
+  },
+  {
+    "username": "drogo_khal",
+    "email": "drogo.k@email.com",
+    "password": "HorseLord2024",
+    "role": "member"
+  },
+  {
+    "username": "reference_lib",
+    "email": "reference.lib@email.com",
+    "password": "Reference$Help1",
+    "role": "librarian"
+  },
+  {
+    "username": "jorah_mormont",
+    "email": "jorah.m@email.com",
+    "password": "ExileBear2024",
+    "role": "member"
+  },
+  {
+    "username": "missandei",
+    "email": "missandei@email.com",
+    "password": "Translator$1",
+    "role": "member"
+  },
+  {
+    "username": "grey_worm",
+    "email": "grey.worm@email.com",
+    "password": "Unsullied2024",
+    "role": "member"
+  },
+  {
+    "username": "periodicals_lib",
+    "email": "periodicals.lib@email.com",
+    "password": "Periodicals$1",
+    "role": "librarian"
+  },
+  {
+    "username": "varys_spider",
+    "email": "varys.s@email.com",
+    "password": "ForTheRealm1",
+    "role": "member"
+  },
+  {
+    "username": "baelish_littlefinger",
+    "email": "baelish.l@email.com",
+    "password": "ChaosLadder$",
+    "role": "member"
+  },
+  {
+    "username": "melisandre",
+    "email": "melisandre@email.com",
+    "password": "LordOfLight1",
+    "role": "member"
+  },
+  {
+    "username": "tech_librarian",
+    "email": "tech.lib@email.com",
+    "password": "Tech$Support1",
+    "role": "librarian"
+  },
+  {
+    "username": "stannis_baratheon",
+    "email": "stannis.b@email.com",
+    "password": "OneTrueKing2024",
+    "role": "member"
+  },
+  {
+    "username": "davos_seaworth",
+    "email": "davos.s@email.com",
+    "password": "OnionKnight1",
+    "role": "member"
+  },
+  {
+    "username": "shae",
+    "email": "shae@email.com",
+    "password": "MyLion2024",
+    "role": "member"
+  },
+  {
+    "username": "community_lib",
+    "email": "community.lib@email.com",
+    "password": "Community$Out1",
+    "role": "librarian"
+  },
+  {
+    "username": "ygritte",
+    "email": "ygritte@email.com",
+    "password": "YouKnowNothing",
+    "role": "member"
+  },
+  {
+    "username": "tormund_giantsbane",
+    "email": "tormund.g@email.com",
+    "password": "GiantsMilk2024",
+    "role": "member"
+  },
+  {
+    "username": "sam_tarly",
+    "email": "sam.tarly@email.com",
+    "password": "MaesterSam1",
+    "role": "member"
+  },
+  {
+    "username": "events_lib",
+    "email": "events.lib@email.com",
+    "password": "Events$2024",
+    "role": "librarian"
+  },
+  {
+    "username": "gendry",
+    "email": "gendry@email.com",
+    "password": "BullHelmet2024",
+    "role": "member"
+  },
+  {
+    "username": "beric_dondarrion",
+    "email": "beric.d@email.com",
+    "password": "LordOfLight#1",
+    "role": "member"
+  },
+  {
+    "username": "thor_odinson",
+    "email": "thor.o@email.com",
+    "password": "GodOfThunder!",
+    "role": "member"
+  },
+  {
+    "username": "lib_assistant1",
+    "email": "assistant1.lib@email.com",
+    "password": "Assistant$2024",
+    "role": "librarian"
+  },
+  {
+    "username": "natasha_romanoff",
+    "email": "natasha.r@email.com",
+    "password": "BlackWidow2024",
+    "role": "member"
+  },
+  {
+    "username": "steve_rogers",
+    "email": "steve.r@email.com",
+    "password": "CaptainAmerica1",
+    "role": "member"
+  },
+  {
+    "username": "bruce_banner",
+    "email": "bruce.b@email.com",
+    "password": "HulkSmash!123",
+    "role": "member"
+  },
+  {
+    "username": "lib_assistant2",
+    "email": "assistant2.lib@email.com",
+    "password": "LibAssistant$2",
+    "role": "librarian"
+  },
+  {
+    "username": "clint_barton",
+    "email": "clint.b@email.com",
+    "password": "Hawkeye2024!",
+    "role": "member"
+  },
+  {
+    "username": "wanda_maximoff",
+    "email": "wanda.m@email.com",
+    "password": "ScarletWitch1",
+    "role": "member"
+  },
+  {
+    "username": "vision",
+    "email": "vision@email.com",
+    "password": "MindStone$2024",
+    "role": "member"
+  },
+  {
+    "username": "senior_librarian",
+    "email": "senior.lib@email.com",
+    "password": "Senior$Lib2024",
+    "role": "librarian"
+  },
+  {
+    "username": "peter_quill",
+    "email": "peter.q@email.com",
+    "password": "StarLord2024",
+    "role": "member"
+  },
+  {
+    "username": "gamora",
+    "email": "gamora@email.com",
+    "password": "DaughterThanos",
+    "role": "member"
+  },
+  {
+    "username": "rocket_raccoon",
+    "email": "rocket.r@email.com",
+    "password": "Boom!2024",
+    "role": "member"
+  },
+  {
+    "username": "head_librarian",
+    "email": "head.lib@email.com",
+    "password": "Head$Library1",
+    "role": "librarian"
+  },
+  {
+    "username": "groot",
+    "email": "groot@email.com",
+    "password": "IamGroot2024",
+    "role": "member"
+  },
+  {
+    "username": "drax_destroyer",
+    "email": "drax.d@email.com",
+    "password": "Destroyer2024",
+    "role": "member"
+  },
+  {
+    "username": "mantis",
+    "email": "mantis@email.com",
+    "password": "Empath$2024",
+    "role": "member"
+  },
+  {
+    "username": "director_lib",
+    "email": "director.lib@email.com",
+    "password": "Director$Lib1",
+    "role": "librarian"
+  },
+  {
+    "username": "nebula",
+    "email": "nebula@email.com",
+    "password": "CyborgSister1",
+    "role": "member"
+  },
+  {
+    "username": "thanos",
+    "email": "thanos@email.com",
+    "password": "BalanceUniverse",
+    "role": "member"
+  }
+]
