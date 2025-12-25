@@ -35,3 +35,7 @@ Thumbs.db
 coverage.html
 test-report.json
 golangci-report.json
+
+
+sonar-project.properties
+Makefile
