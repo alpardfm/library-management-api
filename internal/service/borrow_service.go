@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alpardfm/library-management-api/configs"
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
@@ -21,22 +22,23 @@ type BorrowService interface {
 }
 
 type borrowService struct {
-	borrowRepo      repository.BorrowRepository
-	bookRepo        repository.BookRepository
-	userRepo        repository.UserRepository
-	maxBooksPerUser int
+	borrowRepo repository.BorrowRepository
+	bookRepo   repository.BookRepository
+	userRepo   repository.UserRepository
+	config     configs.Config
 }
 
 func NewBorrowService(
 	borrowRepo repository.BorrowRepository,
 	bookRepo repository.BookRepository,
 	userRepo repository.UserRepository,
+	config configs.Config,
 ) BorrowService {
 	return &borrowService{
-		borrowRepo:      borrowRepo,
-		bookRepo:        bookRepo,
-		userRepo:        userRepo,
-		maxBooksPerUser: 5, // Default max 5 books per user
+		borrowRepo: borrowRepo,
+		bookRepo:   bookRepo,
+		userRepo:   userRepo,
+		config:     config, // Default max 5 books per user
 	}
 }
 
@@ -66,8 +68,8 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 	if err != nil {
 		return nil, err
 	}
-	if activeCount >= int64(s.maxBooksPerUser) {
-		return nil, fmt.Errorf("user has reached maximum borrow limit of %d books", s.maxBooksPerUser)
+	if activeCount >= int64(s.config.MaxBooksPerUser) {
+		return nil, fmt.Errorf("user has reached maximum borrow limit of %d books", s.config.MaxBooksPerUser)
 	}
 
 	// Check if user already borrowed this book and hasn't returned it

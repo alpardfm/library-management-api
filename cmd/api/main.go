@@ -56,7 +56,7 @@ func main() {
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	bookService := service.NewBookService(bookRepo)
-	borrowService := service.NewBorrowService(borrowRepo, bookRepo, userRepo)
+	borrowService := service.NewBorrowService(borrowRepo, bookRepo, userRepo, *cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
