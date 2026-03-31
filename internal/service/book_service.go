@@ -1,4 +1,3 @@
-// internal/service/book_service.go
 package service
 
 import (
@@ -28,13 +27,11 @@ func NewBookService(bookRepo repository.BookRepository) BookService {
 }
 
 func (s *bookService) CreateBook(req dto.CreateBookRequest) (*models.Book, error) {
-	// Check if ISBN exists
 	existingBook, _ := s.bookRepo.FindByISBN(req.ISBN)
 	if existingBook != nil {
 		return nil, errors.New("book with this ISBN already exists")
 	}
 
-	// Create book
 	book := &models.Book{
 		ISBN:            req.ISBN,
 		Title:           req.Title,
@@ -63,13 +60,11 @@ func (s *bookService) GetBookByID(id uint) (*models.Book, error) {
 }
 
 func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Book, error) {
-	// Get existing book
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
 		return nil, fmt.Errorf("book not found: %w", err)
 	}
 
-	// Update fields if provided
 	if req.Title != "" {
 		book.Title = req.Title
 	}
@@ -89,12 +84,10 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 		book.Description = req.Description
 	}
 	if req.TotalCopies > 0 {
-		// Adjust available copies
 		diff := req.TotalCopies - book.TotalCopies
 		book.TotalCopies = req.TotalCopies
 		book.AvailableCopies += diff
 
-		// Ensure available copies doesn't go negative
 		if book.AvailableCopies < 0 {
 			book.AvailableCopies = 0
 		}
@@ -108,13 +101,11 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 }
 
 func (s *bookService) DeleteBook(id uint) error {
-	// Check if book exists
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
 		return fmt.Errorf("book not found: %w", err)
 	}
 
-	// Check if book has active borrows
 	if book.AvailableCopies != book.TotalCopies {
 		return errors.New("cannot delete book with active borrows")
 	}

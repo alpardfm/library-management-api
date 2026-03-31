@@ -1,4 +1,3 @@
-// internal/repository/borrow_repository.go
 package repository
 
 import (

@@ -1,4 +1,3 @@
-// internal/service/borrow_service.go
 package service
 
 import (
@@ -43,12 +42,11 @@ func NewBorrowService(
 		borrowRepo: borrowRepo,
 		bookRepo:   bookRepo,
 		userRepo:   userRepo,
-		config:     config, // Default max 5 books per user
+		config:     config,
 	}
 }
 
 func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*models.BorrowRecord, error) {
-	// Check if user exists and is active
 	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -57,18 +55,15 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 		return nil, errors.New("user account is deactivated")
 	}
 
-	// Check if book exists
 	book, err := s.bookRepo.FindByID(req.BookID)
 	if err != nil {
 		return nil, fmt.Errorf("book not found: %w", err)
 	}
 
-	// Check if book is available
 	if !book.CanBorrow() {
 		return nil, errors.New("book is not available for borrowing")
 	}
 
-	// Check user's active borrow count
 	activeCount, err := s.borrowRepo.CountActiveByUser(userID)
 	if err != nil {
 		return nil, err
@@ -77,30 +72,22 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 		return nil, fmt.Errorf("user has reached maximum borrow limit of %d books", s.config.MaxBooksPerUser)
 	}
 
-	// Check if user already borrowed this book and hasn't returned it
 	existingBorrow, _ := s.borrowRepo.FindActiveByUserAndBook(userID, req.BookID)
 	if existingBorrow != nil {
 		return nil, errors.New("user has already borrowed this book")
 	}
 
-	// Create borrow record
 	borrowRecord := &models.BorrowRecord{
 		UserID:     userID,
 		BookID:     req.BookID,
 		BorrowDate: time.Now(),
 	}
 
-	// Set custom due date if provided
 	if !req.DueDate.IsZero() {
 		borrowRecord.DueDate = req.DueDate
 	} else {
-		borrowRecord.DueDate = borrowRecord.BorrowDate.Add(time.Duration(s.config.BorrowDays) * 24 * time.Hour) // 14 days
+		borrowRecord.DueDate = borrowRecord.BorrowDate.Add(time.Duration(s.config.BorrowDays) * 24 * time.Hour)
 	}
-
-	// Use transaction to ensure data consistency
-	// (In real implementation, use DB transaction)
-
-	// Update book available copies
 	if err := book.Borrow(); err != nil {
 		return nil, err
 	}
@@ -108,9 +95,7 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 		return nil, err
 	}
 
-	// Create borrow record
 	if err := s.borrowRepo.Create(borrowRecord); err != nil {
-		// Rollback book update
 		book.Return()
 		s.bookRepo.Update(book)
 		return nil, err
@@ -120,46 +105,36 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 }
 
 func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error) {
-	// Get borrow record
 	borrowRecord, err := s.borrowRepo.FindByID(req.BorrowRecordID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("borrow record not found: %w", err)
 	}
 
-	// Check if user owns this borrow record or is admin/librarian
 	if borrowRecord.UserID != userID {
-		// In real app, check user role
-		// For now, only allow user to return their own books
 		return nil, 0, errors.New("not authorized to return this book")
 	}
 
-	// Check if already returned
 	if borrowRecord.ReturnDate != nil {
 		return nil, 0, errors.New("book already returned")
 	}
 
-	// Get book
 	book, err := s.bookRepo.FindByID(borrowRecord.BookID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("book not found: %w", err)
 	}
 
-	// Calculate fine
 	fine := borrowRecord.CalculateFine(s.config.FinePerDay)
 
-	// Update book available copies
 	book.Return()
 	if err := s.bookRepo.Update(book); err != nil {
 		return nil, 0, err
 	}
 
-	// Update borrow record
 	now := time.Now()
 	borrowRecord.ReturnDate = &now
 	borrowRecord.Status = models.StatusReturned
 
 	if err := s.borrowRepo.Update(borrowRecord); err != nil {
-		// Rollback book update
 		book.Borrow()
 		s.bookRepo.Update(book)
 		return nil, 0, err

@@ -1,4 +1,3 @@
-// internal/models/borrow_record.go
 package models
 
 import (
@@ -26,7 +25,6 @@ type BorrowRecord struct {
 	CreatedAt  time.Time    `json:"created_at"`
 	UpdatedAt  time.Time    `json:"updated_at"`
 
-	// Relations
 	User User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Book Book `gorm:"foreignKey:BookID" json:"book,omitempty"`
 }
@@ -35,7 +33,6 @@ func (br *BorrowRecord) BeforeCreate(tx *gorm.DB) error {
 	br.CreatedAt = time.Now()
 	br.UpdatedAt = time.Now()
 
-	// Set initial status
 	if br.Status == "" {
 		br.Status = StatusBorrowed
 	}
@@ -46,7 +43,6 @@ func (br *BorrowRecord) BeforeCreate(tx *gorm.DB) error {
 func (br *BorrowRecord) BeforeUpdate(tx *gorm.DB) error {
 	br.UpdatedAt = time.Now()
 
-	// Update status based on return date
 	if br.ReturnDate != nil && br.Status != StatusReturned {
 		br.Status = StatusReturned
 	} else if br.ReturnDate == nil && time.Now().After(br.DueDate) {
@@ -61,7 +57,7 @@ func (br *BorrowRecord) IsOverdue() bool {
 	return br.Status == StatusOverdue || (br.ReturnDate == nil && time.Now().After(br.DueDate))
 }
 
-// CalculateFine calculates fine for overdue books (Rp 1000 per day)
+// CalculateFine calculates the overdue fine using the provided daily rate.
 func (br *BorrowRecord) CalculateFine(fine int) int {
 	if br.ReturnDate != nil || !br.IsOverdue() {
 		return 0
