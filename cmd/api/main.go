@@ -1,4 +1,3 @@
-// cmd/api/main.go
 package main
 
 import (
@@ -56,7 +55,11 @@ func main() {
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	bookService := service.NewBookService(bookRepo)
-	borrowService := service.NewBorrowService(borrowRepo, bookRepo, userRepo)
+	borrowService := service.NewBorrowService(borrowRepo, bookRepo, userRepo, service.BorrowServiceConfig{
+		MaxBooksPerUser: cfg.MaxBooksPerUser,
+		BorrowDays:      cfg.BorrowDays,
+		FinePerDay:      cfg.FinePerDay,
+	})
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
