@@ -139,7 +139,7 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 	}
 
 	// Calculate fine
-	fine := borrowRecord.CalculateFine()
+	fine := borrowRecord.CalculateFine(s.config.FinePerDay)
 
 	// Update book available copies
 	book.Return()
@@ -201,5 +201,5 @@ func (s *borrowService) CalculateFine(borrowID uint) (int, error) {
 		return 0, fmt.Errorf("borrow record not found: %w", err)
 	}
 
-	return borrowRecord.CalculateFine(), nil
+	return borrowRecord.CalculateFine(s.config.FinePerDay), nil
 }

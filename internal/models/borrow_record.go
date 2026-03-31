@@ -67,7 +67,7 @@ func (br *BorrowRecord) IsOverdue() bool {
 }
 
 // CalculateFine calculates fine for overdue books (Rp 1000 per day)
-func (br *BorrowRecord) CalculateFine() int {
+func (br *BorrowRecord) CalculateFine(fine int) int {
 	if br.ReturnDate != nil || !br.IsOverdue() {
 		return 0
 	}
@@ -77,5 +77,5 @@ func (br *BorrowRecord) CalculateFine() int {
 		return 0
 	}
 
-	return overdueDays * 1000 // Rp 1000 per day
+	return overdueDays * fine // Rp 1000 per day
 }
