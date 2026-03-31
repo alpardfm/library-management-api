@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alpardfm/library-management-api/configs"
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
@@ -25,14 +24,20 @@ type borrowService struct {
 	borrowRepo repository.BorrowRepository
 	bookRepo   repository.BookRepository
 	userRepo   repository.UserRepository
-	config     configs.Config
+	config     BorrowServiceConfig
+}
+
+type BorrowServiceConfig struct {
+	MaxBooksPerUser int
+	BorrowDays      int
+	FinePerDay      int
 }
 
 func NewBorrowService(
 	borrowRepo repository.BorrowRepository,
 	bookRepo repository.BookRepository,
 	userRepo repository.UserRepository,
-	config configs.Config,
+	config BorrowServiceConfig,
 ) BorrowService {
 	return &borrowService{
 		borrowRepo: borrowRepo,
