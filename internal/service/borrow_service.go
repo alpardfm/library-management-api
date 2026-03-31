@@ -87,6 +87,8 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 	// Set custom due date if provided
 	if !req.DueDate.IsZero() {
 		borrowRecord.DueDate = req.DueDate
+	} else {
+		borrowRecord.DueDate = borrowRecord.BorrowDate.Add(time.Duration(s.config.BorrowDays) * 24 * time.Hour) // 14 days
 	}
 
 	// Use transaction to ensure data consistency

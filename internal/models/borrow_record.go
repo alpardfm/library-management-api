@@ -40,11 +40,6 @@ func (br *BorrowRecord) BeforeCreate(tx *gorm.DB) error {
 		br.BorrowDate = time.Now()
 	}
 
-	// Set due date to 14 days from borrow date if not set
-	if br.DueDate.IsZero() {
-		br.DueDate = br.BorrowDate.Add(14 * 24 * time.Hour) // 14 days
-	}
-
 	// Set initial status
 	if br.Status == "" {
 		br.Status = StatusBorrowed
