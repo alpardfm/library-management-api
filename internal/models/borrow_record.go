@@ -35,11 +35,6 @@ func (br *BorrowRecord) BeforeCreate(tx *gorm.DB) error {
 	br.CreatedAt = time.Now()
 	br.UpdatedAt = time.Now()
 
-	// Set borrow date to now if not set
-	if br.BorrowDate.IsZero() {
-		br.BorrowDate = time.Now()
-	}
-
 	// Set initial status
 	if br.Status == "" {
 		br.Status = StatusBorrowed
@@ -77,5 +72,5 @@ func (br *BorrowRecord) CalculateFine(fine int) int {
 		return 0
 	}
 
-	return overdueDays * fine // Rp 1000 per day
+	return overdueDays * fine
 }

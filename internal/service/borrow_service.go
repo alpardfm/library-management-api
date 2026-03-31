@@ -80,8 +80,9 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 
 	// Create borrow record
 	borrowRecord := &models.BorrowRecord{
-		UserID: userID,
-		BookID: req.BookID,
+		UserID:     userID,
+		BookID:     req.BookID,
+		BorrowDate: time.Now(),
 	}
 
 	// Set custom due date if provided
