@@ -16,17 +16,41 @@ func LoggerMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		// Log after request is processed
-		duration := time.Since(start)
+		latencyMs := time.Since(start).Milliseconds()
 		requestID := c.GetString(RequestIDKey)
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
 
-		log.Info().
+		event := log.Info()
+		if c.Writer.Status() >= 500 {
+			event = log.Error()
+		}
+
+		event.
 			Str("request_id", requestID).
 			Str("method", c.Request.Method).
-			Str("path", c.Request.URL.Path).
+			Str("path", path).
 			Int("status", c.Writer.Status()).
-			Str("ip", c.ClientIP()).
-			Str("user_agent", c.Request.UserAgent()).
-			Dur("duration", duration).
+			Int64("latency_ms", latencyMs).
+			Fields(requestActorFields(c)).
 			Msg("request completed")
 	}
+}
+
+func requestActorFields(c *gin.Context) map[string]interface{} {
+	fields := map[string]interface{}{}
+
+	if userID, exists := c.Get("user_id"); exists {
+		fields["user_id"] = userID
+	}
+
+	if role, exists := c.Get("role"); exists {
+		if roleStr, ok := role.(string); ok {
+			fields["role"] = roleStr
+		}
+	}
+
+	return fields
 }

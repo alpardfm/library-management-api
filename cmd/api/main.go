@@ -75,15 +75,7 @@ func main() {
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(gin.Recovery())
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"app":     cfg.AppName,
-			"version": cfg.AppVersion,
-			"env":     cfg.AppEnv,
-		})
-	})
+	registerSystemRoutes(router, db, cfg)
 
 	// Public routes
 	public := router.Group("/api/v1")
