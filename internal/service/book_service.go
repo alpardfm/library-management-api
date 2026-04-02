@@ -145,13 +145,13 @@ func (s *bookService) CheckAvailability(id uint) (bool, error) {
 
 func validateBookStock(book *models.Book) error {
 	if book.TotalCopies < 1 {
-		return apperror.Internal("book stock is inconsistent", nil)
+		return apperror.Conflict("book stock is inconsistent")
 	}
 	if book.AvailableCopies < 0 {
-		return apperror.Internal("book stock is inconsistent", nil)
+		return apperror.Conflict("book stock is inconsistent")
 	}
 	if book.AvailableCopies > book.TotalCopies {
-		return apperror.Internal("book stock is inconsistent", nil)
+		return apperror.Conflict("book stock is inconsistent")
 	}
 
 	return nil
