@@ -6,11 +6,14 @@ import (
 	"github.com/alpardfm/library-management-api/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BorrowRepository interface {
+	WithTx(tx *gorm.DB) BorrowRepository
 	Create(record *models.BorrowRecord) error
 	FindByID(id uint) (*models.BorrowRecord, error)
+	FindByIDForUpdate(id uint) (*models.BorrowRecord, error)
 	FindActiveByUserAndBook(userID, bookID uint) (*models.BorrowRecord, error)
 	Update(record *models.BorrowRecord) error
 	ListByUser(userID uint, page, limit int) ([]models.BorrowRecord, int64, error)
@@ -27,6 +30,10 @@ func NewBorrowRepository(db *gorm.DB) BorrowRepository {
 	return &borrowRepository{db: db}
 }
 
+func (r *borrowRepository) WithTx(tx *gorm.DB) BorrowRepository {
+	return &borrowRepository{db: tx}
+}
+
 func (r *borrowRepository) Create(record *models.BorrowRecord) error {
 	return r.db.Create(record).Error
 }
@@ -34,6 +41,18 @@ func (r *borrowRepository) Create(record *models.BorrowRecord) error {
 func (r *borrowRepository) FindByID(id uint) (*models.BorrowRecord, error) {
 	var record models.BorrowRecord
 	err := r.db.Preload("User").Preload("Book").First(&record, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+func (r *borrowRepository) FindByIDForUpdate(id uint) (*models.BorrowRecord, error) {
+	var record models.BorrowRecord
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Preload("User").
+		Preload("Book").
+		First(&record, id).Error
 	if err != nil {
 		return nil, err
 	}

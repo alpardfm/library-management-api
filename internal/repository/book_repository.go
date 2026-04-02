@@ -5,11 +5,14 @@ import (
 	"github.com/alpardfm/library-management-api/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BookRepository interface {
+	WithTx(tx *gorm.DB) BookRepository
 	Create(book *models.Book) error
 	FindByID(id uint) (*models.Book, error)
+	FindByIDForUpdate(id uint) (*models.Book, error)
 	FindByISBN(isbn string) (*models.Book, error)
 	Update(book *models.Book) error
 	Delete(id uint) error
@@ -25,6 +28,10 @@ func NewBookRepository(db *gorm.DB) BookRepository {
 	return &bookRepository{db: db}
 }
 
+func (r *bookRepository) WithTx(tx *gorm.DB) BookRepository {
+	return &bookRepository{db: tx}
+}
+
 func (r *bookRepository) Create(book *models.Book) error {
 	return r.db.Create(book).Error
 }
@@ -32,6 +39,15 @@ func (r *bookRepository) Create(book *models.Book) error {
 func (r *bookRepository) FindByID(id uint) (*models.Book, error) {
 	var book models.Book
 	err := r.db.First(&book, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &book, nil
+}
+
+func (r *bookRepository) FindByIDForUpdate(id uint) (*models.Book, error) {
+	var book models.Book
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&book, id).Error
 	if err != nil {
 		return nil, err
 	}
