@@ -110,6 +110,7 @@ library-management-api/
 - Validasi ISBN format
 - Validasi tanggal peminjaman
 - Validasi stok buku
+- Guard stok di service untuk menolak update/return yang bisa membuat stok tidak konsisten, dengan pesan error yang human-friendly sebelum constraint DB terlanggar
 - Custom validation rules
 
 ## **📡 API Endpoints**
