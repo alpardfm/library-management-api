@@ -1,251 +1,118 @@
-# 📚 **Library Management API**
+# Library Management API
 
-## **Deskripsi Proyek**
+REST API for managing users, books, borrowing, and returns in a small library system.
 
-**Library Management API** adalah sistem manajemen perpustakaan digital yang dibangun dengan **Go (Golang)** menggunakan arsitektur **Clean Architecture**. API ini menyediakan fungsi lengkap untuk mengelola perpustakaan modern termasuk manajemen buku, anggota, peminjaman, dan pengembalian.
+## What This Project Includes
 
-## **🎯 Fitur Utama**
+- JWT authentication with role-based access for `admin`, `librarian`, and `member`
+- Book CRUD with search, sorting, and pagination
+- Borrow and return flow with transaction boundary in the service layer
+- Stock and active-borrow invariants enforced in PostgreSQL
+- Unit, integration, and E2E test layers
+- GitHub Actions quality gate for lint and unit tests
 
-### **1. 🔐 Sistem Autentikasi & Otorisasi**
+## Stack
 
-- **Registrasi pengguna** dengan validasi email
-- **Login dengan JWT** (JSON Web Tokens)
-- **Role-based access control** (RBAC):
-    - **Admin**: Akses penuh ke semua fitur
-    - **Librarian (Pustakawan)**: Kelola buku & peminjaman
-    - **Member (Anggota)**: Pinjam & kembalikan buku
-- **Token expiration** dengan konfigurasi waktu
+- Go
+- Gin
+- GORM
+- PostgreSQL
+- Testify + SQLMock
+- golangci-lint
 
-### **2. 📖 Manajemen Buku**
+## Quick Start
 
-- **CRUD lengkap** untuk data buku (Create, Read, Update, Delete)
-- **Validasi ISBN** (International Standard Book Number)
-- **Pencarian buku** dengan filter:
-    - Judul buku
-    - Penulis
-    - ISBN
-    - Genre
-- **Status ketersediaan** buku (tersedia/tidak)
-- **Manajemen stok** (total copy vs copy tersedia)
+### 1. Prepare environment
 
-### **3. 👥 Manajemen Anggota**
-
-- **Registrasi anggota** baru
-- **Verifikasi status aktif/non-aktif**
-- **Limit peminjaman** (maksimal buku per anggota)
-- **Riwayat peminjaman** per anggota
-
-### **4. 📅 Sistem Peminjaman**
-
-- **Pinjam buku** dengan validasi:
-    - Buku tersedia
-    - Anggota aktif
-    - Tidak melebihi limit
-- **Atur tanggal jatuh tempo** (default: 14 hari)
-- **Tracking status**:
-    - Dipinjam (borrowed)
-    - Dikembalikan (returned)
-    - Terlambat (overdue)
-- **Perhitungan denda** otomatis (Rp 1000/hari)
-
-### **5. 📊 Laporan & Monitoring**
-
-- **Daftar peminjaman aktif**
-- **Buku yang terlambat** dikembalikan
-- **Statistik penggunaan** perpustakaan
-- **Pencatatan riwayat** lengkap
-
-## **🏗️ Arsitektur Teknis**
-
-### **Struktur Folder**
-```
-library-management-api/
-├── 📁 cmd/api/           # Entry point aplikasi
-├── 📁 internal/          # Kode internal aplikasi
-│   ├── models/          # Struct database (User, Book, Borrow)
-│   ├── repository/      # Layer akses database (GORM)
-│   ├── service/         # Business logic
-│   ├── handler/         # HTTP controllers (Gin)
-│   ├── middleware/      # Auth, logging, recovery
-│   └── dto/             # Data Transfer Objects
-├── 📁 pkg/              # Package reusable
-│   ├── database/        # Koneksi PostgreSQL
-│   ├── auth/            # JWT authentication
-│   └── utils/           # Helper functions
-├── 📁 tests/            # Test suites lengkap
-│   ├── unit/            # Unit tests
-│   ├── integration/     # Integration tests
-│   └── e2e/             # End-to-end tests
-└── 📁 configs/          # Konfigurasi aplikasi
-
+```bash
+cp .env.example .env
 ```
 
-### **Teknologi Stack**
+### 2. Start PostgreSQL
 
-- **Bahasa**: Go 1.21+
-- **Framework**: Gin Gonic (HTTP router)
-- **Database**: PostgreSQL 15+
-- **ORM**: GORM (Go ORM)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Testing**: Testify, SQLMock
-- **Container**: Docker & Docker Compose
-- **Code Quality**: SonarQube, golangci-lint
-- **CI/CD**: GitHub Actions
-
-## **🔐 Keamanan**
-
-### **Security Features**
-
-- **Password hashing** dengan bcrypt
-- **JWT token** dengan expiration
-- **Role-based authorization**
-- **Input validation** lengkap
-- **SQL injection prevention** (GORM)
-- **CORS configuration**
-- **Rate limiting** (bisa diimplementasi)
-
-### **Validasi Data**
-
-- Validasi email format
-- Validasi ISBN format
-- Validasi tanggal peminjaman
-- Validasi stok buku
-- Guard stok di service untuk menolak update/return yang bisa membuat stok tidak konsisten, dengan pesan error yang human-friendly sebelum constraint DB terlanggar
-- Custom validation rules
-
-## **📡 API Endpoints**
-
-### **Public Routes**
-
-```
-POST   /api/v1/auth/register    Registrasi anggota baru
-POST   /api/v1/auth/login       Login dan dapatkan token
-GET    /health                  Liveness check API
-GET    /ready                   Readiness check API + DB ping
-
+```bash
+make docker-up
 ```
 
-### **Protected Routes (Perlu Auth)**
+### 3. Run the API
 
-```
-# Books
-GET    /api/v1/books            List semua buku (dengan pagination)
-GET    /api/v1/books/:id        Detail buku spesifik
-POST   /api/v1/books            Tambah buku baru (Admin/Librarian)
-PUT    /api/v1/books/:id        Update buku (Admin/Librarian)
-DELETE /api/v1/books/:id        Hapus buku (Admin/Librarian)
-
-# Borrow
-POST   /api/v1/borrow           Pinjam buku
-POST   /api/v1/borrow/return    Kembalikan buku
-GET    /api/v1/borrow/my-books  Riwayat peminjaman saya
-GET    /api/v1/borrow/active    List peminjaman aktif (Admin/Librarian)
-GET    /api/v1/borrow/overdue   List buku terlambat (Admin/Librarian)
-
+```bash
+make run
 ```
 
-### **Request/Response Examples**
+API base URL:
 
-### **Register User**
-
-```
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "member"
-}
-
-Response:
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com",
-    "role": "member"
-  }
-}
-
+```text
+http://localhost:8080
 ```
 
-### **Borrow Book**
+Health endpoints:
 
-```
-POST /api/v1/borrow
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-
-{
-  "book_id": 5
-}
-
-Response:
-{
-  "success": true,
-  "message": "Book borrowed successfully",
-  "data": {
-    "id": 100,
-    "user_id": 1,
-    "book_id": 5,
-    "borrow_date": "2024-01-15T10:30:00Z",
-    "due_date": "2024-01-29T10:30:00Z",
-    "status": "borrowed"
-  }
-}
-
+```text
+GET /health
+GET /ready
 ```
 
-### **List Query Parameters**
+## Environment Variables
 
-- `page`: default `1`, harus integer positif
-- `limit`: default `10`, di-clamp sesuai endpoint
-- `search`: optional, dipakai untuk endpoint yang mendukung pencarian
-- `sort`: optional, harus salah satu value yang diizinkan endpoint
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `APP_PORT` | `8080` | API port |
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | `password` | PostgreSQL password |
+| `DB_NAME` | `library_db` | PostgreSQL database |
+| `DB_SSLMODE` | `disable` | PostgreSQL SSL mode |
+| `JWT_SECRET` | `your-super-secret-jwt-key-change-in-production` | JWT signing secret |
+| `JWT_EXPIRY` | `24h` | Token expiry |
+| `READ_TIMEOUT` | `10s` | HTTP read timeout |
+| `WRITE_TIMEOUT` | `10s` | HTTP write timeout |
+| `IDLE_TIMEOUT` | `60s` | HTTP idle timeout |
+| `MAX_BOOKS_PER_USER` | `5` | Borrow limit per user |
+| `BORROW_DAYS` | `14` | Default due date offset |
+| `FINE_PER_DAY` | `1000` | Overdue fine per day |
 
-### **List Meta Response**
+## API Endpoints
 
-```json
-{
-  "meta": {
-    "page": 1,
-    "limit": 10,
-    "total": 42,
-    "total_pages": 5,
-    "sort": "created_at_desc",
-    "search": "golang"
-  }
-}
-```
+### Public
 
-### **Return Policy**
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/register` | Register a user |
+| `POST` | `/api/v1/auth/login` | Login and get JWT |
+| `GET` | `/health` | Liveness check |
+| `GET` | `/ready` | Readiness check with DB ping |
 
-- `member` hanya boleh melakukan return untuk borrow record miliknya sendiri.
-- `admin` dan `librarian` boleh memproses return untuk borrow record user lain.
-- Semua kebijakan di atas tetap lewat validasi borrow record aktif dan transaction flow yang sama.
+### Protected
 
-### **JWT/Auth Notes**
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/books` | List books |
+| `GET` | `/api/v1/books/:id` | Get book detail |
+| `POST` | `/api/v1/books` | Create book (`admin`, `librarian`) |
+| `PUT` | `/api/v1/books/:id` | Update book (`admin`, `librarian`) |
+| `DELETE` | `/api/v1/books/:id` | Delete book (`admin`, `librarian`) |
+| `POST` | `/api/v1/borrow` | Borrow a book |
+| `POST` | `/api/v1/borrow/return` | Return a book |
+| `GET` | `/api/v1/borrow/my-books` | List current user borrows |
+| `GET` | `/api/v1/borrow/active` | List active borrows (`admin`, `librarian`) |
+| `GET` | `/api/v1/borrow/overdue` | List overdue borrows (`admin`, `librarian`) |
 
-- `JWTExpiry` dari konfigurasi dipakai langsung saat token dibuat.
-- Error auth dibedakan jelas antara token expired (`token has expired`) dan token invalid (`invalid token`).
+## Response Contract
 
-### **Standard Response Envelope**
+Success shape:
 
 ```json
 {
   "success": true,
   "message": "optional message",
   "data": {},
-  "error": null,
   "meta": {}
 }
 ```
 
-### **Standard Error Example**
+Error shape:
 
 ```json
 {
@@ -258,371 +125,88 @@ Response:
 }
 ```
 
-## **🗄️ Database Schema**
+List query params:
 
-### **Tables Structure**
+| Param | Description |
+| --- | --- |
+| `page` | Positive integer, default `1` |
+| `limit` | Positive integer, clamped per endpoint |
+| `search` | Optional search string |
+| `sort` | Optional endpoint-specific sort key |
 
-### **1. Users Table**
+List meta:
 
-```sql
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) DEFAULT 'member',
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-```
-
-### **2. Books Table**
-
-```sql
-CREATE TABLE books (
-    id SERIAL PRIMARY KEY,
-    isbn VARCHAR(13) UNIQUE NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    author VARCHAR(255) NOT NULL,
-    publisher VARCHAR(100),
-    publication_year INTEGER,
-    genre VARCHAR(50),
-    total_copies INTEGER DEFAULT 1,
-    available_copies INTEGER DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-```
-
-### **3. Borrow Records Table**
-
-```sql
-CREATE TABLE borrow_records (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
-    borrow_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    due_date DATE NOT NULL,
-    return_date DATE,
-    status VARCHAR(20) DEFAULT 'borrowed',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-```
-
-## **🧪 Testing Strategy**
-
-### **Test Coverage 100% Target**
-
-```
-✅ Unit Tests:    80% - Individual components
-✅ Integration:   15% - API endpoints & DB integration
-✅ E2E Tests:     5%  - Complete user flows
-✅ Total:        100% - Full coverage
-
-```
-
-### **Testing Layers**
-
-1. **Models**: Validasi data & business rules
-2. **Repository**: Database operations dengan SQL mock
-3. **Service**: Business logic dengan mock dependencies
-4. **Handler**: HTTP requests/responses
-5. **Middleware**: Auth, logging, error handling
-6. **Integration**: API endpoints dengan database real
-
-### **Test Tools**
-
-- **Testify**: Assertions & mocking
-- **SQLMock**: Mock database untuk unit tests
-- **httptest**: HTTP testing
-- **Docker**: Test database isolation
-
-### **Testing Notes**
-
-- Unit test `service` dan `repository` tetap memakai mock/`sqlmock`.
-- Concurrency hardening untuk borrow flow dibuktikan lewat integration test Postgres nyata di [`tests/integration/borrow_concurrency_test.go`](https://github.com/alpardfm/library-management-api/blob/master/tests/integration/borrow_concurrency_test.go).
-- Integration test akan skip dengan pesan yang jelas saat database test atau server E2E tidak tersedia, sehingga failure env lebih mudah dibedakan dari regression aplikasi.
-- Happy-path E2E saat ini men-cover `register -> login -> list books` dan memakai username/email unik per run supaya aman dijalankan ulang tanpa bentrok data lama.
-- Constraint/index invariant yang dibuat di `AutoMigrate` memakai SQL Postgres-specific. Saat dialector bukan `postgres`, raw SQL invariant tersebut di-skip agar test environment non-Postgres tidak gagal palsu.
-- `AutoMigrate` juga menambahkan index support untuk query utama:
-  - trigram GIN index untuk pencarian buku di `title`, `author`, dan `isbn` jika extension `pg_trgm` berhasil diaktifkan
-  - partial unique index untuk active borrow lookup `(user_id, book_id) WHERE return_date IS NULL`
-  - partial index tambahan untuk active borrow list/count berbasis `due_date` dan `user_id`
-- Semua raw SQL migration di atas dibuat idempotent dan aman di-rerun dengan `IF NOT EXISTS` atau guard `DO $$ ... IF NOT EXISTS ... $$`.
-- App selalu mencoba mengaktifkan `pg_trgm` secara graceful. Jika `CREATE EXTENSION` gagal karena privilege di managed PostgreSQL, aplikasi hanya menulis warning dan tetap lanjut boot tanpa trigram index.
-
-### **CI Quality Gates**
-
-- GitHub Actions workflow utama ada di `.github/workflows/quality-gates.yml`.
-- PR ke `master` otomatis menjalankan quality feedback wajib:
-  - `lint`
-  - `unit-test`
-- Push ke `master` dan `dev` juga menjalankan workflow yang sama untuk validasi branch.
-- Integration test disediakan sebagai job opsional `integration-test` lewat `workflow_dispatch`, memakai PostgreSQL service container.
-- Untuk branch protection GitHub, tandai status check `lint` dan `unit-test` sebagai required checks di PR.
-
-### **Run CI Locally**
-
-```bash
-# Lint
-golangci-lint run --timeout=5m
-
-# Unit test
-go test ./tests/unit/... -v
-
-# Optional integration test
-DB_HOST=localhost \
-DB_PORT=5432 \
-DB_USER=postgres \
-DB_PASSWORD=password \
-DB_NAME=library_test \
-DB_SSLMODE=disable \
-go test ./tests/integration/... -v
-```
-
-### **E2E Preconditions**
-
-- Server API harus sudah running dan bisa diakses.
-- Endpoint health harus aktif di `GET /health`.
-- Database dan environment aplikasi harus sudah siap, karena E2E tidak mem-boot app sendiri.
-- Default base URL E2E adalah `http://localhost:8080`. Jika beda, set `E2E_BASE_URL`.
-
-### **Run E2E**
-
-```bash
-# 1. Pastikan app dan database sudah jalan
-go run cmd/api/main.go
-
-# 2. Jalankan 1 happy-path E2E
-go test ./tests/e2e -run TestLibraryE2ETestSuite -v
-
-# 3. Jika server tidak di localhost:8080
-E2E_BASE_URL=http://localhost:8081 go test ./tests/e2e -run TestLibraryE2ETestSuite -v
-```
-
-## **🚀 Deployment**
-
-### **Local Development**
-
-```bash
-# 1. Clone repository
-git clone <https://github.com/username/library-management-api.git>
-
-# 2. Setup environment
-cp .env.example .env
-# Edit .env sesuai konfigurasi
-
-# 3. Start services
-docker-compose up -d
-
-# 4. Run application
-go run cmd/api/main.go
-
-```
-
-### **Docker Deployment**
-
-```bash
-# Build image
-docker build -t library-api:latest .
-
-# Run with Docker Compose
-docker-compose -f docker-compose.prod.yml up -d
-
-```
-
-### **Kubernetes Deployment**
-
-```bash
-# Apply Kubernetes manifests
-kubectl apply -f deployments/kubernetes/
-
-```
-
-## **📊 Monitoring & Logging**
-
-### **Health Checks**
-
-```
-GET /health
-
-Response:
+```json
 {
-  "status": "healthy",
-  "app": "Library Management API",
-  "version": "1.0.0",
-  "env": "production"
+  "page": 1,
+  "limit": 10,
+  "total": 42,
+  "total_pages": 5
 }
-
-GET /ready
-
-Response:
-{
-  "status": "ready"
-}
-
 ```
 
-### **Logging Features**
+## Makefile Commands
 
-- **Structured logging** dengan Zerolog
-- **Request logging** standar (`request_id`, `method`, `path`, `status`, `latency_ms`, `user_id`, `role`)
-- **Error logging** untuk panic/recovery dan 5xx request
-- **Sensitive data tidak ikut dilog** (mis. token/header auth/password)
+| Command | Description |
+| --- | --- |
+| `make run` | Run API locally |
+| `make build` | Build binary |
+| `make test` | Run unit and integration tests |
+| `make test-unit` | Run unit tests |
+| `make test-integration` | Run integration tests |
+| `make test-e2e` | Run E2E tests |
+| `make lint` | Run golangci-lint |
+| `make vet` | Run `go vet` |
+| `make quality` | Run lint, vet, and unit tests |
+| `make docker-up` | Start PostgreSQL and pgAdmin |
+| `make docker-down` | Stop Docker services |
 
-### **Metrics** (Opsional)
+## Test Matrix
 
-- API request count
-- Database query performance
-- Error rates
-- Response time percentiles
+| Layer | Command | Purpose |
+| --- | --- | --- |
+| Unit | `go test ./tests/unit/... -v` | Fast feedback for handlers, services, repositories, middleware |
+| Integration | `go test ./tests/integration/... -v` | DB-backed behavior and concurrency checks |
+| E2E | `go test ./tests/e2e/... -v` | Happy path against a running API |
 
-## **🔧 Maintenance**
+### E2E Preconditions
 
-### **Database Migrations**
+- API server must already be running
+- Database must already be available
+- Default E2E base URL is `http://localhost:8080`
+- Override with `E2E_BASE_URL=http://host:port` if needed
 
-```bash
-# Auto migrate on startup (development)
-# Manual migration for production
-go run cmd/migrate/main.go
+## CI
 
+GitHub Actions workflow:
+
+```text
+.github/workflows/quality-gates.yml
 ```
 
-### **Backup & Recovery**
+Required PR jobs:
 
-- **Automatic backups** dengan pg_dump
-- **Point-in-time recovery**
-- **Data export** untuk reporting
+- `lint`
+- `unit-test`
 
-### **Scaling Strategies**
+Optional manual job:
 
-- **Horizontal scaling** dengan load balancer
-- **Database connection pooling**
-- **Caching layer** (Redis opsional)
-- **Message queue** untuk async tasks
+- `integration-test`
 
-## **🎯 Target Pengguna**
+## ADRs
 
-### **1. Perpustakaan Umum**
+- [ADR 0001](docs/adr/0001-service-transaction-boundary.md)
+- [ADR 0002](docs/adr/0002-database-invariants.md)
+- [ADR 0003](docs/adr/0003-standard-response-contract.md)
 
-- Sekolah & Universitas
-- Perpustakaan Kota/Kabupaten
-- Perpustakaan Khusus (Rumah Sakit, Perusahaan)
+## Release
 
-### **2. Aplikasi Edukasi**
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Release checklist: [RELEASE.md](RELEASE.md)
 
-- Platform e-learning
-- Sistem manajemen konten edukasi
-- Aplikasi membaca digital
+## Notes
 
-### **3. Bisnis**
-
-- Manajemen inventaris buku
-- Sistem rental buku
-- Koleksi pribadi/organisasi
-
-## **✨ Keunggulan**
-
-### **1. Kode Berkualitas Tinggi**
-
-- **100% test coverage** dengan SonarQube integration
-- **Clean architecture** dengan separation of concerns
-- **Zero code smells** & **zero duplication**
-- **Comprehensive error handling**
-
-### **2. Developer Experience**
-
-- **Dokumentasi lengkap** dengan examples
-- **Easy setup** dengan Docker
-- **Comprehensive testing suite**
-- **IDE friendly** dengan proper Go modules
-
-### **3. Production Ready**
-
-- **Graceful shutdown** handling
-- **Health checks** & monitoring
-- **Security best practices**
-- **Scalable architecture**
-
-### **4. Extensible**
-
-- **Modular design** mudah ditambah fitur
-- **Plugin architecture** untuk additional features
-- **API versioning** support
-- **Multi-database** support (MySQL, SQLite opsional)
-
-## **📈 Roadmap**
-
-### **Versi 1.0** (Current)
-
-- ✅ Core features: Books, Users, Borrowing
-- ✅ Authentication & Authorization
-- ✅ Basic reporting
-
-### **Versi 2.0** (Planned)
-
-- 🔄 Notification system (email/SMS)
-- 🔄 Reservation system (antrian buku)
-- 🔄 Fine payment integration
-- 🔄 Advanced analytics dashboard
-
-### **Versi 3.0** (Future)
-
-- 🔄 Mobile app support
-- 🔄 QR Code book scanning
-- 🔄 Machine learning recommendations
-- 🔄 Multi-tenant support
-
-## **👥 Kontribusi**
-
-### **Cara Berkontribusi**
-
-1. Fork repository
-2. Create feature branch
-3. Commit changes dengan meaningful messages
-4. Push to branch
-5. Create Pull Request
-
-### **Coding Standards**
-
-- **Go coding standards** dengan gofmt
-- **Test coverage** minimal 90%
-- **Documentation** untuk public APIs
-- **Commit convention** (Conventional Commits)
-
-## **📄 License**
-
-**MIT License** - Bebas digunakan untuk keperluan komersial maupun non-komersial dengan attribution.
-
----
-
-## **🎯 Kesimpulan**
-
-**Library Management API** adalah solusi lengkap untuk manajemen perpustakaan digital modern dengan:
-
-✅ **Fitur lengkap** untuk operasional perpustakaan
-
-✅ **Arsitektur bersih** mudah maintain & scale
-
-✅ **Keamanan terjamin** dengan JWT & RBAC
-
-✅ **Test coverage 100%** kualitas kode terjamin
-
-✅ **Production ready** dengan Docker & monitoring
-
-✅ **Extensible** untuk kebutuhan masa depan
-
-**Siap digunakan untuk:**
-
-- 🏫 Perpustakaan sekolah/universitas
-- 🏢 Perpustakaan perusahaan
-- 📱 Aplikasi baca buku digital
-- 🎓 Platform e-learning
-- 📊 Sistem manajemen inventaris buku
-
-**"From zero to production-ready library system in minutes!"** 🚀
+- PostgreSQL-specific constraints and indexes are applied only when the dialector is PostgreSQL.
+- `pg_trgm` is enabled gracefully. If extension creation fails, the app continues without trigram indexes.
+- Integration concurrency test reference:
+  [tests/integration/borrow_concurrency_test.go](https://github.com/alpardfm/library-management-api/blob/master/tests/integration/borrow_concurrency_test.go)
