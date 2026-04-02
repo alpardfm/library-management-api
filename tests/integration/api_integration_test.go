@@ -47,10 +47,6 @@ func (suite *APIIntegrationTestSuite) SetupTest() {
 	suite.setupTestData()
 }
 
-func (suite *APIIntegrationTestSuite) cleanDatabase() {
-	suite.Require().NoError(resetIntegrationTestDB(suite.db))
-}
-
 func (suite *APIIntegrationTestSuite) setupTestData() {
 	// Create test user
 	user := &models.User{
