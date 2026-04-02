@@ -87,6 +87,52 @@ func AutoMigrate(db *gorm.DB) error {
 		}
 	}
 
+	if db.Dialector.Name() != "postgres" {
+		return nil
+	}
+
+	if err := db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1
+				FROM pg_constraint
+				WHERE conname = 'available_copies_non_negative'
+			) THEN
+				ALTER TABLE books
+				ADD CONSTRAINT available_copies_non_negative
+				CHECK (available_copies >= 0);
+			END IF;
+		END $$;
+	`).Error; err != nil {
+		return fmt.Errorf("failed to create non-negative stock constraint: %w", err)
+	}
+
+	if err := db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1
+				FROM pg_constraint
+				WHERE conname = 'available_copies_not_exceed_total'
+			) THEN
+				ALTER TABLE books
+				ADD CONSTRAINT available_copies_not_exceed_total
+				CHECK (available_copies <= total_copies);
+			END IF;
+		END $$;
+	`).Error; err != nil {
+		return fmt.Errorf("failed to create max stock constraint: %w", err)
+	}
+
+	if err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
+		ON borrow_records (user_id, book_id)
+		WHERE return_date IS NULL
+	`).Error; err != nil {
+		return fmt.Errorf("failed to create active borrow unique index: %w", err)
+	}
+
 	return nil
 }
 

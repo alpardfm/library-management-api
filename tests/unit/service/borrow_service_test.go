@@ -142,12 +142,25 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
+func (m *MockUserRepository) WithTx(tx *gorm.DB) repository.UserRepository {
+	args := m.Called(tx)
+	return args.Get(0).(repository.UserRepository)
+}
+
 func (m *MockUserRepository) Create(user *models.User) error {
 	args := m.Called(user)
 	return args.Error(0)
 }
 
 func (m *MockUserRepository) FindByID(id uint) (*models.User, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
+func (m *MockUserRepository) FindByIDForUpdate(id uint) (*models.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -229,11 +242,12 @@ func TestBorrowService_BorrowBook_Success(t *testing.T) {
 	user := &models.User{ID: userID, IsActive: true}
 	book := &models.Book{ID: 1, TotalCopies: 5, AvailableCopies: 3}
 
-	mockUserRepo.On("FindByID", userID).Return(user, nil).Once()
-	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(1), nil).Once()
 	sqlMock.ExpectBegin()
+	mockUserRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockUserRepo).Once()
 	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
 	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockUserRepo.On("FindByIDForUpdate", userID).Return(user, nil).Once()
+	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(1), nil).Once()
 	mockBookRepo.On("FindByIDForUpdate", uint(1)).Return(book, nil).Once()
 	mockBorrowRepo.On("FindActiveByUserAndBook", userID, uint(1)).Return((*models.BorrowRecord)(nil), gorm.ErrRecordNotFound).Once()
 	mockBookRepo.On("Update", mock.AnythingOfType("*models.Book")).
@@ -353,11 +367,12 @@ func TestBorrowService_BorrowBook_TransactionError_RollsBack(t *testing.T) {
 	user := &models.User{ID: userID, IsActive: true}
 	book := &models.Book{ID: 1, TotalCopies: 5, AvailableCopies: 1}
 
-	mockUserRepo.On("FindByID", userID).Return(user, nil).Once()
-	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(0), nil).Once()
 	sqlMock.ExpectBegin()
+	mockUserRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockUserRepo).Once()
 	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
 	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockUserRepo.On("FindByIDForUpdate", userID).Return(user, nil).Once()
+	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(0), nil).Once()
 	mockBookRepo.On("FindByIDForUpdate", uint(1)).Return(book, nil).Once()
 	mockBorrowRepo.On("FindActiveByUserAndBook", userID, uint(1)).Return((*models.BorrowRecord)(nil), gorm.ErrRecordNotFound).Once()
 	mockBookRepo.On("Update", mock.AnythingOfType("*models.Book")).Return(nil).Once()
@@ -369,6 +384,90 @@ func TestBorrowService_BorrowBook_TransactionError_RollsBack(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, borrowRecord)
 	assert.Contains(t, err.Error(), "insert failed")
+	mockUserRepo.AssertExpectations(t)
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+func TestBorrowService_BorrowBook_DuplicateActiveBorrow_RollsBack(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, mockUserRepo, sqlMock, borrowService := newBorrowService(t)
+
+	userID := uint(1)
+	req := dto.BorrowBookRequest{BookID: 1}
+	user := &models.User{ID: userID, IsActive: true}
+	book := &models.Book{ID: 1, TotalCopies: 5, AvailableCopies: 2}
+	existingBorrow := &models.BorrowRecord{ID: 99, UserID: userID, BookID: req.BookID, Status: models.StatusBorrowed}
+
+	sqlMock.ExpectBegin()
+	mockUserRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockUserRepo).Once()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockUserRepo.On("FindByIDForUpdate", userID).Return(user, nil).Once()
+	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(1), nil).Once()
+	mockBookRepo.On("FindByIDForUpdate", req.BookID).Return(book, nil).Once()
+	mockBorrowRepo.On("FindActiveByUserAndBook", userID, req.BookID).Return(existingBorrow, nil).Once()
+	sqlMock.ExpectRollback()
+
+	borrowRecord, err := borrowService.BorrowBook(userID, req)
+
+	assert.Error(t, err)
+	assert.Nil(t, borrowRecord)
+	assert.Equal(t, "user has already borrowed this book", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+func TestBorrowService_BorrowBook_MaxLimitReached_RollsBack(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, mockUserRepo, sqlMock, borrowService := newBorrowService(t)
+
+	userID := uint(1)
+	req := dto.BorrowBookRequest{BookID: 1}
+	user := &models.User{ID: userID, IsActive: true}
+
+	sqlMock.ExpectBegin()
+	mockUserRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockUserRepo).Once()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockUserRepo.On("FindByIDForUpdate", userID).Return(user, nil).Once()
+	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(5), nil).Once()
+	sqlMock.ExpectRollback()
+
+	borrowRecord, err := borrowService.BorrowBook(userID, req)
+
+	assert.Error(t, err)
+	assert.Nil(t, borrowRecord)
+	assert.Contains(t, err.Error(), "maximum borrow limit")
+	mockUserRepo.AssertExpectations(t)
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+func TestBorrowService_BorrowBook_BookUnavailable_RollsBack(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, mockUserRepo, sqlMock, borrowService := newBorrowService(t)
+
+	userID := uint(1)
+	req := dto.BorrowBookRequest{BookID: 1}
+	user := &models.User{ID: userID, IsActive: true}
+	book := &models.Book{ID: 1, TotalCopies: 1, AvailableCopies: 0}
+
+	sqlMock.ExpectBegin()
+	mockUserRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockUserRepo).Once()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockUserRepo.On("FindByIDForUpdate", userID).Return(user, nil).Once()
+	mockBorrowRepo.On("CountActiveByUser", userID).Return(int64(0), nil).Once()
+	mockBookRepo.On("FindByIDForUpdate", req.BookID).Return(book, nil).Once()
+	sqlMock.ExpectRollback()
+
+	borrowRecord, err := borrowService.BorrowBook(userID, req)
+
+	assert.Error(t, err)
+	assert.Nil(t, borrowRecord)
+	assert.Equal(t, "book is not available for borrowing", err.Error())
 	mockUserRepo.AssertExpectations(t)
 	mockBookRepo.AssertExpectations(t)
 	mockBorrowRepo.AssertExpectations(t)

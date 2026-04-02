@@ -29,8 +29,8 @@ func TestBorrowRepository_FindActiveByUserAndBook(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "user_id", "book_id", "status"}).
 		AddRow(1, 1, 1, "borrowed")
 
-	mock.ExpectQuery(`SELECT \* FROM "borrow_records" WHERE user_id = \$1 AND book_id = \$2 AND status = \$3`).
-		WithArgs(1, 1, "borrowed").
+	mock.ExpectQuery(`SELECT \* FROM "borrow_records" WHERE user_id = \$1 AND book_id = \$2 AND return_date IS NULL ORDER BY "borrow_records"\."id" LIMIT \$3`).
+		WithArgs(1, 1, 1).
 		WillReturnRows(rows)
 
 	record, err := repo.FindActiveByUserAndBook(1, 1)
@@ -55,8 +55,8 @@ func TestBorrowRepository_CountActiveByUser(t *testing.T) {
 	repo := repository.NewBorrowRepository(gormDB)
 
 	countRows := sqlmock.NewRows([]string{"count"}).AddRow(3)
-	mock.ExpectQuery(`SELECT count\(\*\) FROM "borrow_records" WHERE user_id = \$1 AND status = \$2`).
-		WithArgs(1, "borrowed").
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "borrow_records" WHERE user_id = \$1 AND return_date IS NULL`).
+		WithArgs(1).
 		WillReturnRows(countRows)
 
 	count, err := repo.CountActiveByUser(1)
@@ -91,19 +91,19 @@ func TestBorrowRepository_ListOverdue(t *testing.T) {
 	mock.ExpectQuery(`SELECT \* FROM "borrow_records" WHERE status = \$1 OR \(return_date IS NULL AND due_date < \$2\) ORDER BY due_date ASC`).
 		WillReturnRows(rows)
 
-	// Mock user preload
-	userRows := sqlmock.NewRows([]string{"id", "username"}).
-		AddRow(1, "user1").
-		AddRow(2, "user2")
-	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" IN \(\$1,\$2\)`).
-		WillReturnRows(userRows)
-
 	// Mock book preload
 	bookRows := sqlmock.NewRows([]string{"id", "title"}).
 		AddRow(1, "Book 1").
 		AddRow(2, "Book 2")
 	mock.ExpectQuery(`SELECT \* FROM "books" WHERE "books"."id" IN \(\$1,\$2\)`).
 		WillReturnRows(bookRows)
+
+	// Mock user preload
+	userRows := sqlmock.NewRows([]string{"id", "username"}).
+		AddRow(1, "user1").
+		AddRow(2, "user2")
+	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" IN \(\$1,\$2\)`).
+		WillReturnRows(userRows)
 
 	records, total, err := repo.ListOverdue(1, 10)
 
