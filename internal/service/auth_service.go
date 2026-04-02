@@ -2,16 +2,13 @@
 package service
 
 import (
-	"time"
-
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
 	"github.com/alpardfm/library-management-api/pkg/apperror"
 	"github.com/alpardfm/library-management-api/pkg/auth"
-
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 type AuthService interface {
@@ -24,12 +21,14 @@ type AuthService interface {
 type authService struct {
 	userRepo  repository.UserRepository
 	jwtSecret string
+	jwtExpiry time.Duration
 }
 
-func NewAuthService(userRepo repository.UserRepository, jwtSecret string) AuthService {
+func NewAuthService(userRepo repository.UserRepository, jwtSecret string, jwtExpiry time.Duration) AuthService {
 	return &authService{
 		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
+		jwtExpiry: jwtExpiry,
 	}
 }
 
@@ -121,18 +120,7 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 }
 
 func (s *authService) GenerateToken(user *models.User) (string, error) {
-	claims := auth.Claims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Role:     string(user.Role),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.jwtSecret))
+	return auth.GenerateToken(user.ID, user.Username, string(user.Role), s.jwtSecret, s.jwtExpiry)
 }
 
 func (s *authService) ValidateToken(tokenString string) (*auth.Claims, error) {

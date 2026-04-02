@@ -13,7 +13,7 @@ import (
 
 type BorrowService interface {
 	BorrowBook(userID uint, req dto.BorrowBookRequest) (*models.BorrowRecord, error)
-	ReturnBook(userID uint, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error)
+	ReturnBook(userID uint, role string, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error)
 	GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error)
 	GetActiveBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
 	GetOverdueBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
@@ -123,7 +123,7 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 	return borrowRecord, nil
 }
 
-func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error) {
+func (s *borrowService) ReturnBook(userID uint, role string, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error) {
 	var borrowRecord *models.BorrowRecord
 	var fine int
 	var err error
@@ -136,7 +136,11 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 			return apperror.NotFound("borrow record")
 		}
 
-		if borrowRecord.UserID != userID {
+		if role == "" {
+			role = string(models.RoleMember)
+		}
+
+		if !canManageBorrowReturn(role) && borrowRecord.UserID != userID {
 			return apperror.Forbidden("not authorized to return this book")
 		}
 
@@ -171,6 +175,10 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 	}
 
 	return borrowRecord, fine, nil
+}
+
+func canManageBorrowReturn(role string) bool {
+	return role == string(models.RoleAdmin) || role == string(models.RoleLibrarian)
 }
 
 func (s *borrowService) GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {

@@ -321,7 +321,7 @@ func TestBorrowService_ReturnBook_Success(t *testing.T) {
 		Once()
 	sqlMock.ExpectCommit()
 
-	returnedRecord, fine, err := borrowService.ReturnBook(userID, req)
+	returnedRecord, fine, err := borrowService.ReturnBook(userID, "member", req)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, returnedRecord)
@@ -348,12 +348,46 @@ func TestBorrowService_ReturnBook_NotOwner_RollsBack(t *testing.T) {
 	mockBorrowRepo.On("FindByIDForUpdate", uint(1)).Return(borrowRecord, nil).Once()
 	sqlMock.ExpectRollback()
 
-	returnedRecord, fine, err := borrowService.ReturnBook(1, req)
+	returnedRecord, fine, err := borrowService.ReturnBook(1, "member", req)
 
 	assert.Error(t, err)
 	assert.Nil(t, returnedRecord)
 	assert.Equal(t, 0, fine)
 	assert.Equal(t, "not authorized to return this book", err.Error())
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+func TestBorrowService_ReturnBook_AdminCanReturnOtherUserBook(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, _, sqlMock, borrowService := newBorrowService(t)
+
+	req := dto.ReturnBookRequest{BorrowRecordID: 1}
+	now := time.Now()
+	borrowRecord := &models.BorrowRecord{
+		ID:         1,
+		UserID:     99,
+		BookID:     1,
+		BorrowDate: now.Add(-2 * 24 * time.Hour),
+		DueDate:    now.Add(5 * 24 * time.Hour),
+		Status:     models.StatusBorrowed,
+	}
+	book := &models.Book{ID: 1, TotalCopies: 5, AvailableCopies: 2}
+
+	sqlMock.ExpectBegin()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockBorrowRepo.On("FindByIDForUpdate", uint(1)).Return(borrowRecord, nil).Once()
+	mockBookRepo.On("FindByIDForUpdate", uint(1)).Return(book, nil).Once()
+	mockBookRepo.On("Update", mock.AnythingOfType("*models.Book")).Return(nil).Once()
+	mockBorrowRepo.On("Update", mock.AnythingOfType("*models.BorrowRecord")).Return(nil).Once()
+	sqlMock.ExpectCommit()
+
+	returnedRecord, fine, err := borrowService.ReturnBook(1, "admin", req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, returnedRecord)
+	assert.Equal(t, 0, fine)
 	mockBookRepo.AssertExpectations(t)
 	mockBorrowRepo.AssertExpectations(t)
 	assert.NoError(t, sqlMock.ExpectationsWereMet())

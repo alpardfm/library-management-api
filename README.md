@@ -199,6 +199,17 @@ Response:
 
 ```
 
+### **Return Policy**
+
+- `member` hanya boleh melakukan return untuk borrow record miliknya sendiri.
+- `admin` dan `librarian` boleh memproses return untuk borrow record user lain.
+- Semua kebijakan di atas tetap lewat validasi borrow record aktif dan transaction flow yang sama.
+
+### **JWT/Auth Notes**
+
+- `JWTExpiry` dari konfigurasi dipakai langsung saat token dibuat.
+- Error auth dibedakan jelas antara token expired (`token has expired`) dan token invalid (`invalid token`).
+
 ### **Standard Response Envelope**
 
 ```json

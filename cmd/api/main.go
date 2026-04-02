@@ -53,7 +53,7 @@ func main() {
 	borrowRepo := repository.NewBorrowRepository(db)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	bookService := service.NewBookService(bookRepo)
 	borrowService := service.NewBorrowService(db, borrowRepo, bookRepo, userRepo, service.BorrowServiceConfig{
 		MaxBooksPerUser: cfg.MaxBooksPerUser,

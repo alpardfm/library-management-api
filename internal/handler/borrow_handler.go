@@ -40,6 +40,7 @@ func (h *BorrowHandler) BorrowBook(c *gin.Context) {
 
 func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 	userID := c.GetUint("user_id")
+	role := c.GetString("role")
 
 	var req dto.ReturnBookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -47,7 +48,7 @@ func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 		return
 	}
 
-	borrowRecord, fine, err := h.borrowService.ReturnBook(userID, req)
+	borrowRecord, fine, err := h.borrowService.ReturnBook(userID, role, req)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
