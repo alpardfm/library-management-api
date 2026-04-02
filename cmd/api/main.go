@@ -70,6 +70,7 @@ func main() {
 	router := gin.New()
 
 	// Global middleware
+	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.RecoveryMiddleware())
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(gin.Recovery())

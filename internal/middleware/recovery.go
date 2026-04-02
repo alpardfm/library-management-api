@@ -12,8 +12,11 @@ func RecoveryMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
+				requestID := c.GetString(RequestIDKey)
+
 				log.Error().
 					Interface("error", err).
+					Str("request_id", requestID).
 					Str("path", c.Request.URL.Path).
 					Str("method", c.Request.Method).
 					Msg("recovered from panic")

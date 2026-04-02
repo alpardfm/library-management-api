@@ -17,8 +17,10 @@ func LoggerMiddleware() gin.HandlerFunc {
 
 		// Log after request is processed
 		duration := time.Since(start)
+		requestID := c.GetString(RequestIDKey)
 
 		log.Info().
+			Str("request_id", requestID).
 			Str("method", c.Request.Method).
 			Str("path", c.Request.URL.Path).
 			Int("status", c.Writer.Status()).
