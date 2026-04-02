@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alpardfm/library-management-api/internal/models"
@@ -91,49 +92,153 @@ func AutoMigrate(db *gorm.DB) error {
 		return nil
 	}
 
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1
-				FROM pg_constraint
-				WHERE conname = 'available_copies_non_negative'
-			) THEN
-				ALTER TABLE books
-				ADD CONSTRAINT available_copies_non_negative
-				CHECK (available_copies >= 0);
-			END IF;
-		END $$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create non-negative stock constraint: %w", err)
+	return applyPostgresMigrations(db)
+}
+
+type postgresMigration struct {
+	name      string
+	statement string
+}
+
+func applyPostgresMigrations(db *gorm.DB) error {
+	for _, migration := range basePostgresMigrations() {
+		if err := db.Exec(normalizeSQL(migration.statement)).Error; err != nil {
+			return fmt.Errorf("failed to apply %s: %w", migration.name, err)
+		}
 	}
 
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1
-				FROM pg_constraint
-				WHERE conname = 'available_copies_not_exceed_total'
-			) THEN
-				ALTER TABLE books
-				ADD CONSTRAINT available_copies_not_exceed_total
-				CHECK (available_copies <= total_copies);
-			END IF;
-		END $$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create max stock constraint: %w", err)
+	if !tryEnablePgTrgm(db) {
+		return nil
 	}
 
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
-		ON borrow_records (user_id, book_id)
-		WHERE return_date IS NULL
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create active borrow unique index: %w", err)
+	for _, migration := range pgTrgmIndexMigrations() {
+		if err := db.Exec(normalizeSQL(migration.statement)).Error; err != nil {
+			return fmt.Errorf("failed to apply %s: %w", migration.name, err)
+		}
 	}
 
 	return nil
+}
+
+func basePostgresMigrations() []postgresMigration {
+	return []postgresMigration{
+		{
+			name: "available copies non-negative constraint",
+			statement: `
+				DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT 1
+						FROM pg_constraint
+						WHERE conname = 'available_copies_non_negative'
+					) THEN
+						ALTER TABLE books
+						ADD CONSTRAINT available_copies_non_negative
+						CHECK (available_copies >= 0);
+					END IF;
+				END $$;
+			`,
+		},
+		{
+			name: "available copies max constraint",
+			statement: `
+				DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT 1
+						FROM pg_constraint
+						WHERE conname = 'available_copies_not_exceed_total'
+					) THEN
+						ALTER TABLE books
+						ADD CONSTRAINT available_copies_not_exceed_total
+						CHECK (available_copies <= total_copies);
+					END IF;
+				END $$;
+			`,
+		},
+		{
+			name: "active borrow unique index",
+			statement: `
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
+				ON borrow_records (user_id, book_id)
+				WHERE return_date IS NULL
+			`,
+		},
+		{
+			name: "active borrow due date index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_borrow_records_active_due_date
+				ON borrow_records (due_date)
+				WHERE return_date IS NULL
+			`,
+		},
+		{
+			name: "active borrow user created index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_borrow_records_active_user_created_at
+				ON borrow_records (user_id, created_at DESC)
+				WHERE return_date IS NULL
+			`,
+		},
+	}
+}
+
+func pgTrgmExtensionMigration() postgresMigration {
+	return postgresMigration{
+		name: "pg_trgm extension",
+		statement: `
+			CREATE EXTENSION IF NOT EXISTS pg_trgm
+		`,
+	}
+}
+
+func pgTrgmIndexMigrations() []postgresMigration {
+	return []postgresMigration{
+		{
+			name: "books title trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_title_trgm
+				ON books
+				USING gin (title gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books author trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_author_trgm
+				ON books
+				USING gin (author gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books isbn trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_isbn_trgm
+				ON books
+				USING gin (isbn gin_trgm_ops)
+			`,
+		},
+	}
+}
+
+func allPostgresMigrations() []postgresMigration {
+	migrations := append([]postgresMigration{}, basePostgresMigrations()...)
+	migrations = append(migrations, pgTrgmExtensionMigration())
+	migrations = append(migrations, pgTrgmIndexMigrations()...)
+	return migrations
+}
+
+func normalizeSQL(sql string) string {
+	return strings.TrimSpace(sql)
+}
+
+func tryEnablePgTrgm(db *gorm.DB) bool {
+	if err := db.Exec(normalizeSQL(pgTrgmExtensionMigration().statement)).Error; err != nil {
+		log.Printf("warning: failed to enable pg_trgm extension, skipping trigram indexes: %v", err)
+		return false
+	}
+
+	return true
 }
 
 func getEnv(key, defaultValue string) string {
