@@ -4,11 +4,11 @@ package handler_test
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alpardfm/library-management-api/pkg/apperror"
 	"github.com/alpardfm/library-management-api/pkg/auth"
 
 	"github.com/gin-gonic/gin"
@@ -91,6 +91,7 @@ func TestAuthHandler_Register(t *testing.T) {
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 
+		assert.Equal(t, true, response["success"])
 		assert.Equal(t, "User registered successfully", response["message"])
 		assert.NotNil(t, response["data"])
 
@@ -114,13 +115,18 @@ func TestAuthHandler_Register(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 
+		var response map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &response)
+		assert.Equal(t, false, response["success"])
+		assert.NotNil(t, response["error"])
+
 		mockService.AssertNotCalled(t, "Register")
 	})
 
 	// Test Case 3: Service error
 	t.Run("Service Error", func(t *testing.T) {
 		mockService.On("Register", reqBody).
-			Return((*models.User)(nil), assert.AnError).
+			Return((*models.User)(nil), apperror.Conflict("username already exists")).
 			Once()
 
 		jsonBody, _ := json.Marshal(reqBody)
@@ -130,7 +136,13 @@ func TestAuthHandler_Register(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusConflict, w.Code)
+
+		var response map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &response)
+		assert.Equal(t, false, response["success"])
+		assert.Equal(t, "username already exists", response["message"])
+		assert.NotNil(t, response["error"])
 
 		mockService.AssertExpectations(t)
 	})
@@ -181,8 +193,12 @@ func TestAuthHandler_Login(t *testing.T) {
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 
-		assert.Equal(t, "jwt-token-123", response["token"])
-		assert.NotNil(t, response["user"])
+		assert.Equal(t, true, response["success"])
+		assert.Equal(t, "Login successful", response["message"])
+		assert.NotNil(t, response["data"])
+		data := response["data"].(map[string]interface{})
+		assert.Equal(t, "jwt-token-123", data["token"])
+		assert.NotNil(t, data["user"])
 
 		mockService.AssertExpectations(t)
 	})
@@ -190,7 +206,7 @@ func TestAuthHandler_Login(t *testing.T) {
 	// Test Case 2: Invalid credentials
 	t.Run("Invalid Credentials", func(t *testing.T) {
 		mockService.On("Login", reqBody).
-			Return((*dto.LoginResponse)(nil), errors.New("invalid credentials")).
+			Return((*dto.LoginResponse)(nil), apperror.Unauthorized("invalid credentials")).
 			Once()
 
 		jsonBody, _ := json.Marshal(reqBody)
@@ -205,6 +221,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 
+		assert.Equal(t, false, response["success"])
+		assert.Equal(t, "invalid credentials", response["message"])
 		assert.NotNil(t, response["error"])
 
 		mockService.AssertExpectations(t)

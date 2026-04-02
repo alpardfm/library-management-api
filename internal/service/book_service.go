@@ -1,12 +1,10 @@
 package service
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/pkg/apperror"
 )
 
 type BookService interface {
@@ -29,7 +27,7 @@ func NewBookService(bookRepo repository.BookRepository) BookService {
 func (s *bookService) CreateBook(req dto.CreateBookRequest) (*models.Book, error) {
 	existingBook, _ := s.bookRepo.FindByISBN(req.ISBN)
 	if existingBook != nil {
-		return nil, errors.New("book with this ISBN already exists")
+		return nil, apperror.Conflict("book with this ISBN already exists")
 	}
 
 	book := &models.Book{
@@ -45,7 +43,7 @@ func (s *bookService) CreateBook(req dto.CreateBookRequest) (*models.Book, error
 	}
 
 	if err := s.bookRepo.Create(book); err != nil {
-		return nil, err
+		return nil, apperror.Internal("failed to create book", err)
 	}
 
 	return book, nil
@@ -54,7 +52,7 @@ func (s *bookService) CreateBook(req dto.CreateBookRequest) (*models.Book, error
 func (s *bookService) GetBookByID(id uint) (*models.Book, error) {
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
-		return nil, fmt.Errorf("book not found: %w", err)
+		return nil, apperror.NotFound("book")
 	}
 	return book, nil
 }
@@ -62,7 +60,7 @@ func (s *bookService) GetBookByID(id uint) (*models.Book, error) {
 func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Book, error) {
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
-		return nil, fmt.Errorf("book not found: %w", err)
+		return nil, apperror.NotFound("book")
 	}
 
 	if req.Title != "" {
@@ -94,7 +92,7 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 	}
 
 	if err := s.bookRepo.Update(book); err != nil {
-		return nil, err
+		return nil, apperror.Internal("failed to update book", err)
 	}
 
 	return book, nil
@@ -103,14 +101,17 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 func (s *bookService) DeleteBook(id uint) error {
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
-		return fmt.Errorf("book not found: %w", err)
+		return apperror.NotFound("book")
 	}
 
 	if book.AvailableCopies != book.TotalCopies {
-		return errors.New("cannot delete book with active borrows")
+		return apperror.Conflict("cannot delete book with active borrows")
 	}
 
-	return s.bookRepo.Delete(id)
+	if err := s.bookRepo.Delete(id); err != nil {
+		return apperror.Internal("failed to delete book", err)
+	}
+	return nil
 }
 
 func (s *bookService) ListBooks(page, limit int, search string) ([]models.Book, int64, error) {
@@ -127,7 +128,7 @@ func (s *bookService) ListBooks(page, limit int, search string) ([]models.Book, 
 func (s *bookService) CheckAvailability(id uint) (bool, error) {
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
-		return false, fmt.Errorf("book not found: %w", err)
+		return false, apperror.NotFound("book")
 	}
 
 	return book.CanBorrow(), nil

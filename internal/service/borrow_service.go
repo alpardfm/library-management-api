@@ -2,12 +2,12 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/pkg/apperror"
 	"gorm.io/gorm"
 )
 
@@ -60,35 +60,35 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 
 		user, err := userRepoTx.FindByIDForUpdate(userID)
 		if err != nil {
-			return fmt.Errorf("user not found: %w", err)
+			return apperror.NotFound("user")
 		}
 		if !user.IsActive {
-			return errors.New("user account is deactivated")
+			return apperror.Forbidden("user account is deactivated")
 		}
 
 		activeCount, err := borrowRepoTx.CountActiveByUser(userID)
 		if err != nil {
-			return err
+			return apperror.Internal("failed to count active borrows", err)
 		}
 		if activeCount >= int64(s.config.MaxBooksPerUser) {
-			return fmt.Errorf("user has reached maximum borrow limit of %d books", s.config.MaxBooksPerUser)
+			return apperror.Conflict("user has reached maximum borrow limit")
 		}
 
 		book, err := bookRepoTx.FindByIDForUpdate(req.BookID)
 		if err != nil {
-			return fmt.Errorf("book not found: %w", err)
+			return apperror.NotFound("book")
 		}
 
 		if !book.CanBorrow() {
-			return errors.New("book is not available for borrowing")
+			return apperror.Conflict("book is not available for borrowing")
 		}
 
 		existingBorrow, err := borrowRepoTx.FindActiveByUserAndBook(userID, req.BookID)
 		if err == nil && existingBorrow != nil {
-			return errors.New("user has already borrowed this book")
+			return apperror.Conflict("user has already borrowed this book")
 		}
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+			return apperror.Internal("failed to check active borrow", err)
 		}
 
 		borrowRecord = &models.BorrowRecord{
@@ -104,14 +104,14 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 		}
 
 		if err := book.Borrow(); err != nil {
-			return err
+			return apperror.Conflict(err.Error())
 		}
 		if err := bookRepoTx.Update(book); err != nil {
-			return err
+			return apperror.Internal("failed to update book", err)
 		}
 
 		if err := borrowRepoTx.Create(borrowRecord); err != nil {
-			return err
+			return apperror.Internal("failed to create borrow record", err)
 		}
 
 		return nil
@@ -133,27 +133,27 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 
 		borrowRecord, err = borrowRepoTx.FindByIDForUpdate(req.BorrowRecordID)
 		if err != nil {
-			return fmt.Errorf("borrow record not found: %w", err)
+			return apperror.NotFound("borrow record")
 		}
 
 		if borrowRecord.UserID != userID {
-			return errors.New("not authorized to return this book")
+			return apperror.Forbidden("not authorized to return this book")
 		}
 
 		if borrowRecord.ReturnDate != nil {
-			return errors.New("book already returned")
+			return apperror.Conflict("book already returned")
 		}
 
 		book, err := bookRepoTx.FindByIDForUpdate(borrowRecord.BookID)
 		if err != nil {
-			return fmt.Errorf("book not found: %w", err)
+			return apperror.NotFound("book")
 		}
 
 		fine = borrowRecord.CalculateFine(s.config.FinePerDay)
 
 		book.Return()
 		if err := bookRepoTx.Update(book); err != nil {
-			return fmt.Errorf("failed to update book: %w", err)
+			return apperror.Internal("failed to update book", err)
 		}
 
 		now := time.Now()
@@ -161,7 +161,7 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 		borrowRecord.Status = models.StatusReturned
 
 		if err := borrowRepoTx.Update(borrowRecord); err != nil {
-			return fmt.Errorf("failed to update borrow record: %w", err)
+			return apperror.Internal("failed to update borrow record", err)
 		}
 
 		return nil
@@ -209,7 +209,7 @@ func (s *borrowService) GetOverdueBorrows(page, limit int) ([]models.BorrowRecor
 func (s *borrowService) CalculateFine(borrowID uint) (int, error) {
 	borrowRecord, err := s.borrowRepo.FindByID(borrowID)
 	if err != nil {
-		return 0, fmt.Errorf("borrow record not found: %w", err)
+		return 0, apperror.NotFound("borrow record")
 	}
 
 	return borrowRecord.CalculateFine(s.config.FinePerDay), nil
