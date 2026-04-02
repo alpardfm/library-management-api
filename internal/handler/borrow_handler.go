@@ -7,7 +7,8 @@ import (
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/service"
-
+	"github.com/alpardfm/library-management-api/pkg/apperror"
+	httpresponse "github.com/alpardfm/library-management-api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,20 +25,17 @@ func (h *BorrowHandler) BorrowBook(c *gin.Context) {
 
 	var req dto.BorrowBookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, apperror.BadRequest(err.Error()))
 		return
 	}
 
 	borrowRecord, err := h.borrowService.BorrowBook(userID, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Book borrowed successfully",
-		"data":    borrowRecord,
-	})
+	httpresponse.Success(c, http.StatusCreated, "Book borrowed successfully", borrowRecord, nil)
 }
 
 func (h *BorrowHandler) ReturnBook(c *gin.Context) {
@@ -45,26 +43,24 @@ func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 
 	var req dto.ReturnBookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, apperror.BadRequest(err.Error()))
 		return
 	}
 
 	borrowRecord, fine, err := h.borrowService.ReturnBook(userID, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	response := gin.H{
-		"message": "Book returned successfully",
-		"data":    borrowRecord,
+	data := gin.H{
+		"borrow_record": borrowRecord,
 	}
-
 	if fine > 0 {
-		response["fine"] = fine
+		data["fine"] = fine
 	}
 
-	c.JSON(http.StatusOK, response)
+	httpresponse.Success(c, http.StatusOK, "Book returned successfully", data, nil)
 }
 
 func (h *BorrowHandler) GetMyBorrows(c *gin.Context) {
@@ -74,17 +70,14 @@ func (h *BorrowHandler) GetMyBorrows(c *gin.Context) {
 
 	borrows, total, err := h.borrowService.GetUserBorrows(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": borrows,
-		"meta": gin.H{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
+		"page":  page,
+		"limit": limit,
+		"total": total,
 	})
 }
 
@@ -94,17 +87,14 @@ func (h *BorrowHandler) GetActiveBorrows(c *gin.Context) {
 
 	borrows, total, err := h.borrowService.GetActiveBorrows(page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": borrows,
-		"meta": gin.H{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
+		"page":  page,
+		"limit": limit,
+		"total": total,
 	})
 }
 
@@ -114,16 +104,13 @@ func (h *BorrowHandler) GetOverdueBorrows(c *gin.Context) {
 
 	borrows, total, err := h.borrowService.GetOverdueBorrows(page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": borrows,
-		"meta": gin.H{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
+		"page":  page,
+		"limit": limit,
+		"total": total,
 	})
 }

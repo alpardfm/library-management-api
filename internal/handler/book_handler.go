@@ -7,7 +7,8 @@ import (
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/service"
-
+	"github.com/alpardfm/library-management-api/pkg/apperror"
+	httpresponse "github.com/alpardfm/library-management-api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,83 +24,73 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 	var req dto.CreateBookRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, apperror.BadRequest(err.Error()))
 		return
 	}
 
 	book, err := h.bookService.CreateBook(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Book created successfully",
-		"data":    book,
-	})
+	httpresponse.Success(c, http.StatusCreated, "Book created successfully", book, nil)
 }
 
 func (h *BookHandler) GetBook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid book ID"})
+		httpresponse.Error(c, apperror.BadRequest("invalid book ID"))
 		return
 	}
 
 	book, err := h.bookService.GetBookByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": book,
-	})
+	httpresponse.Success(c, http.StatusOK, "", book, nil)
 }
 
 func (h *BookHandler) UpdateBook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid book ID"})
+		httpresponse.Error(c, apperror.BadRequest("invalid book ID"))
 		return
 	}
 
 	var req dto.UpdateBookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, apperror.BadRequest(err.Error()))
 		return
 	}
 
 	book, err := h.bookService.UpdateBook(uint(id), req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Book updated successfully",
-		"data":    book,
-	})
+	httpresponse.Success(c, http.StatusOK, "Book updated successfully", book, nil)
 }
 
 func (h *BookHandler) DeleteBook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid book ID"})
+		httpresponse.Error(c, apperror.BadRequest("invalid book ID"))
 		return
 	}
 
 	if err := h.bookService.DeleteBook(uint(id)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Book deleted successfully",
-	})
+	httpresponse.Success(c, http.StatusOK, "Book deleted successfully", nil, nil)
 }
 
 func (h *BookHandler) ListBooks(c *gin.Context) {
@@ -109,16 +100,13 @@ func (h *BookHandler) ListBooks(c *gin.Context) {
 
 	books, total, err := h.bookService.ListBooks(page, limit, search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpresponse.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": books,
-		"meta": gin.H{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+	httpresponse.Success(c, http.StatusOK, "", books, gin.H{
+		"page":  page,
+		"limit": limit,
+		"total": total,
 	})
 }

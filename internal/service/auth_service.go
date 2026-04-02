@@ -2,12 +2,12 @@
 package service
 
 import (
-	"errors"
 	"time"
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
+	"github.com/alpardfm/library-management-api/pkg/apperror"
 	"github.com/alpardfm/library-management-api/pkg/auth"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -37,19 +37,19 @@ func (s *authService) Register(req dto.RegisterRequest) (*models.User, error) {
 	// Check if username exists
 	existingUser, _ := s.userRepo.FindByUsername(req.Username)
 	if existingUser != nil {
-		return nil, errors.New("username already exists")
+		return nil, apperror.Conflict("username already exists")
 	}
 
 	// Check if email exists
 	existingUser, _ = s.userRepo.FindByEmail(req.Email)
 	if existingUser != nil {
-		return nil, errors.New("email already exists")
+		return nil, apperror.Conflict("email already exists")
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, apperror.Internal("failed to hash password", err)
 	}
 
 	// Create user
@@ -74,7 +74,7 @@ func (s *authService) Register(req dto.RegisterRequest) (*models.User, error) {
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, err
+		return nil, apperror.Internal("failed to create user", err)
 	}
 
 	return user, nil
@@ -87,25 +87,25 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 		// Try email
 		user, err = s.userRepo.FindByEmail(req.Username)
 		if err != nil {
-			return nil, errors.New("invalid credentials")
+			return nil, apperror.Unauthorized("invalid credentials")
 		}
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		return nil, errors.New("account is deactivated")
+		return nil, apperror.Forbidden("account is deactivated")
 	}
 
 	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, apperror.Unauthorized("invalid credentials")
 	}
 
 	// Generate token
 	token, err := s.GenerateToken(user)
 	if err != nil {
-		return nil, err
+		return nil, apperror.Internal("failed to generate token", err)
 	}
 
 	// Build response

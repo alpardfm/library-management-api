@@ -160,6 +160,7 @@ Content-Type: application/json
 
 Response:
 {
+  "success": true,
   "message": "User registered successfully",
   "data": {
     "id": 1,
@@ -184,6 +185,7 @@ Content-Type: application/json
 
 Response:
 {
+  "success": true,
   "message": "Book borrowed successfully",
   "data": {
     "id": 100,
@@ -195,6 +197,31 @@ Response:
   }
 }
 
+```
+
+### **Standard Response Envelope**
+
+```json
+{
+  "success": true,
+  "message": "optional message",
+  "data": {},
+  "error": null,
+  "meta": {}
+}
+```
+
+### **Standard Error Example**
+
+```json
+{
+  "success": false,
+  "message": "book not found",
+  "error": {
+    "code": "not_found",
+    "message": "book not found"
+  }
+}
 ```
 
 ## **🗄️ Database Schema**
