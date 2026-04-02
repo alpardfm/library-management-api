@@ -119,7 +119,8 @@ library-management-api/
 ```
 POST   /api/v1/auth/register    Registrasi anggota baru
 POST   /api/v1/auth/login       Login dan dapatkan token
-GET    /api/health              Health check API
+GET    /health                  Liveness check API
+GET    /ready                   Readiness check API + DB ping
 
 ```
 
@@ -340,14 +341,21 @@ Response:
   "env": "production"
 }
 
+GET /ready
+
+Response:
+{
+  "status": "ready"
+}
+
 ```
 
 ### **Logging Features**
 
 - **Structured logging** dengan Zerolog
-- **Request logging** (method, path, status, duration)
-- **Error logging** dengan stack trace
-- **Different log levels** (debug, info, warn, error)
+- **Request logging** standar (`request_id`, `method`, `path`, `status`, `latency_ms`, `user_id`, `role`)
+- **Error logging** untuk panic/recovery dan 5xx request
+- **Sensitive data tidak ikut dilog** (mis. token/header auth/password)
 
 ### **Metrics** (Opsional)
 

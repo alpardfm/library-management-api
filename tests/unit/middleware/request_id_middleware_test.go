@@ -108,4 +108,41 @@ func TestLoggerMiddleware_IncludesRequestID(t *testing.T) {
 	assert.Contains(t, output, `"request_id":"trace-abc"`)
 	assert.Contains(t, output, `"path":"/ping"`)
 	assert.Contains(t, output, `"status":200`)
+	assert.Contains(t, output, `"latency_ms":`)
+}
+
+func TestLoggerMiddleware_IncludesActorFieldsWithoutSensitiveData(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var buf bytes.Buffer
+	originalLogger := log.Logger
+	log.Logger = zerolog.New(&buf)
+	defer func() {
+		log.Logger = originalLogger
+	}()
+
+	router := gin.New()
+	router.Use(middleware.RequestIDMiddleware())
+	router.Use(func(c *gin.Context) {
+		c.Set("user_id", uint(7))
+		c.Set("role", "member")
+		c.Next()
+	})
+	router.Use(middleware.LoggerMiddleware())
+	router.GET("/secure", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/secure", nil)
+	req.Header.Set("Authorization", "Bearer secret-token")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	output := buf.String()
+	assert.Contains(t, output, `"request_id":"`)
+	assert.Contains(t, output, `"user_id":7`)
+	assert.Contains(t, output, `"role":"member"`)
+	assert.NotContains(t, output, "secret-token")
+	assert.NotContains(t, output, "Authorization")
 }
