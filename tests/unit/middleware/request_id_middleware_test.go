@@ -59,6 +59,28 @@ func TestRequestIDMiddleware_UsesIncomingHeader(t *testing.T) {
 	assert.Equal(t, "req-123", w.Header().Get(middleware.RequestIDHeader))
 }
 
+func TestRequestIDMiddleware_RegeneratesOverlongIncomingHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(middleware.RequestIDMiddleware())
+	router.GET("/ping", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/ping", nil)
+	req.Header.Set(middleware.RequestIDHeader, string(bytes.Repeat([]byte("a"), 256)))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	requestID := w.Header().Get(middleware.RequestIDHeader)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NotEmpty(t, requestID)
+	assert.NotEqual(t, string(bytes.Repeat([]byte("a"), 256)), requestID)
+	assert.LessOrEqual(t, len(requestID), 128)
+}
+
 func TestLoggerMiddleware_IncludesRequestID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
