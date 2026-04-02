@@ -283,7 +283,7 @@ CREATE TABLE borrow_records (
 ### **Testing Notes**
 
 - Unit test `service` dan `repository` tetap memakai mock/`sqlmock`.
-- Concurrency hardening untuk borrow flow dibuktikan lewat integration test Postgres nyata di [`tests/integration/borrow_concurrency_test.go`](/Users/alpardfm/Documents/Coding/Learn/library-management-api/tests/integration/borrow_concurrency_test.go).
+- Concurrency hardening untuk borrow flow dibuktikan lewat integration test Postgres nyata di [`tests/integration/borrow_concurrency_test.go`](github.com/alpardfm/library-management-api/tests/integration/borrow_concurrency_test.go).
 - Constraint/index invariant yang dibuat di `AutoMigrate` memakai SQL Postgres-specific. Saat dialector bukan `postgres`, raw SQL invariant tersebut di-skip agar test environment non-Postgres tidak gagal palsu.
 
 ## **🚀 Deployment**
