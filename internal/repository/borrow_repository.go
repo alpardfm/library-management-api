@@ -61,8 +61,8 @@ func (r *borrowRepository) FindByIDForUpdate(id uint) (*models.BorrowRecord, err
 
 func (r *borrowRepository) FindActiveByUserAndBook(userID, bookID uint) (*models.BorrowRecord, error) {
 	var record models.BorrowRecord
-	err := r.db.Where("user_id = ? AND book_id = ? AND status = ?",
-		userID, bookID, models.StatusBorrowed).
+	err := r.db.Where("user_id = ? AND book_id = ? AND return_date IS NULL",
+		userID, bookID).
 		First(&record).Error
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (r *borrowRepository) ListOverdue(page, limit int) ([]models.BorrowRecord, 
 func (r *borrowRepository) CountActiveByUser(userID uint) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.BorrowRecord{}).
-		Where("user_id = ? AND status = ?", userID, models.StatusBorrowed).
+		Where("user_id = ? AND return_date IS NULL", userID).
 		Count(&count).Error
 	return count, err
 }

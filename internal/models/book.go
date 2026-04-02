@@ -18,7 +18,7 @@ type Book struct {
 	Genre           string    `gorm:"size:50" json:"genre,omitempty"`
 	Description     string    `gorm:"type:text" json:"description,omitempty"`
 	TotalCopies     int       `gorm:"default:1" json:"total_copies"`
-	AvailableCopies int       `gorm:"default:1" json:"available_copies"`
+	AvailableCopies int       `gorm:"default:1;check:available_copies_non_negative,available_copies >= 0;check:available_copies_not_exceed_total,available_copies <= total_copies" json:"available_copies"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 

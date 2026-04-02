@@ -20,7 +20,7 @@ type BorrowRecord struct {
 	BookID     uint         `gorm:"not null" json:"book_id"`
 	BorrowDate time.Time    `gorm:"not null" json:"borrow_date"`
 	DueDate    time.Time    `gorm:"not null" json:"due_date"`
-	ReturnDate *time.Time   `json:"return_date,omitempty"`
+	ReturnDate *time.Time   `gorm:"index" json:"return_date,omitempty"`
 	Status     BorrowStatus `gorm:"type:varchar(20);default:'borrowed'" json:"status"`
 	CreatedAt  time.Time    `json:"created_at"`
 	UpdatedAt  time.Time    `json:"updated_at"`

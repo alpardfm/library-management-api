@@ -51,27 +51,28 @@ func NewBorrowService(
 }
 
 func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*models.BorrowRecord, error) {
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-	if !user.IsActive {
-		return nil, errors.New("user account is deactivated")
-	}
-
-	activeCount, err := s.borrowRepo.CountActiveByUser(userID)
-	if err != nil {
-		return nil, err
-	}
-	if activeCount >= int64(s.config.MaxBooksPerUser) {
-		return nil, fmt.Errorf("user has reached maximum borrow limit of %d books", s.config.MaxBooksPerUser)
-	}
-
 	var borrowRecord *models.BorrowRecord
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		userRepoTx := s.userRepo.WithTx(tx)
 		bookRepoTx := s.bookRepo.WithTx(tx)
 		borrowRepoTx := s.borrowRepo.WithTx(tx)
+
+		user, err := userRepoTx.FindByIDForUpdate(userID)
+		if err != nil {
+			return fmt.Errorf("user not found: %w", err)
+		}
+		if !user.IsActive {
+			return errors.New("user account is deactivated")
+		}
+
+		activeCount, err := borrowRepoTx.CountActiveByUser(userID)
+		if err != nil {
+			return err
+		}
+		if activeCount >= int64(s.config.MaxBooksPerUser) {
+			return fmt.Errorf("user has reached maximum borrow limit of %d books", s.config.MaxBooksPerUser)
+		}
 
 		book, err := bookRepoTx.FindByIDForUpdate(req.BookID)
 		if err != nil {
