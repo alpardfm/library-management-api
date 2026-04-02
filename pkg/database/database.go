@@ -87,6 +87,10 @@ func AutoMigrate(db *gorm.DB) error {
 		}
 	}
 
+	if db.Dialector.Name() != "postgres" {
+		return nil
+	}
+
 	if err := db.Exec(`
 		DO $$
 		BEGIN
