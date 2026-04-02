@@ -359,9 +359,10 @@ CREATE TABLE borrow_records (
 ### **CI Quality Gates**
 
 - GitHub Actions workflow utama ada di `.github/workflows/quality-gates.yml`.
-- PR ke `main` dan `develop` otomatis menjalankan quality feedback wajib:
+- PR ke `master` otomatis menjalankan quality feedback wajib:
   - `lint`
   - `unit-test`
+- Push ke `master` dan `dev` juga menjalankan workflow yang sama untuk validasi branch.
 - Integration test disediakan sebagai job opsional `integration-test` lewat `workflow_dispatch`, memakai PostgreSQL service container.
 - Untuk branch protection GitHub, tandai status check `lint` dan `unit-test` sebagai required checks di PR.
 
