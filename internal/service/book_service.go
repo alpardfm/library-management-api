@@ -12,7 +12,7 @@ type BookService interface {
 	GetBookByID(id uint) (*models.Book, error)
 	UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Book, error)
 	DeleteBook(id uint) error
-	ListBooks(page, limit int, search string) ([]models.Book, int64, error)
+	ListBooks(page, limit int, search, sort string) ([]models.Book, int64, error)
 	CheckAvailability(id uint) (bool, error)
 }
 
@@ -114,15 +114,8 @@ func (s *bookService) DeleteBook(id uint) error {
 	return nil
 }
 
-func (s *bookService) ListBooks(page, limit int, search string) ([]models.Book, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	return s.bookRepo.List(page, limit, search)
+func (s *bookService) ListBooks(page, limit int, search, sort string) ([]models.Book, int64, error) {
+	return s.bookRepo.List(page, limit, search, sort)
 }
 
 func (s *bookService) CheckAvailability(id uint) (bool, error) {

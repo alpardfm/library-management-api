@@ -8,6 +8,7 @@ import (
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/service"
 	"github.com/alpardfm/library-management-api/pkg/apperror"
+	"github.com/alpardfm/library-management-api/pkg/query"
 	httpresponse "github.com/alpardfm/library-management-api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
@@ -94,19 +95,35 @@ func (h *BookHandler) DeleteBook(c *gin.Context) {
 }
 
 func (h *BookHandler) ListBooks(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	search := c.Query("search")
+	params, err := query.ParseListParams(c, query.ListOptions{
+		DefaultPage:  1,
+		DefaultLimit: 10,
+		MaxLimit:     100,
+		DefaultSort:  "created_at_desc",
+		AllowedSorts: map[string]string{
+			"created_at_desc": "created_at DESC",
+			"created_at_asc":  "created_at ASC",
+			"title_asc":       "title ASC",
+			"title_desc":      "title DESC",
+		},
+	})
+	if err != nil {
+		httpresponse.Error(c, err)
+		return
+	}
 
-	books, total, err := h.bookService.ListBooks(page, limit, search)
+	books, total, err := h.bookService.ListBooks(params.Page, params.Limit, params.Search, params.Sort)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
 	}
 
 	httpresponse.Success(c, http.StatusOK, "", books, gin.H{
-		"page":  page,
-		"limit": limit,
-		"total": total,
+		"page":        params.Page,
+		"limit":       params.Limit,
+		"total":       total,
+		"total_pages": query.TotalPages(total, params.Limit),
+		"sort":        params.Sort,
+		"search":      params.Search,
 	})
 }

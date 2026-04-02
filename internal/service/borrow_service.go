@@ -13,10 +13,10 @@ import (
 
 type BorrowService interface {
 	BorrowBook(userID uint, req dto.BorrowBookRequest) (*models.BorrowRecord, error)
-	ReturnBook(userID uint, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error)
-	GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error)
-	GetActiveBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
-	GetOverdueBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
+	ReturnBook(userID uint, role string, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error)
+	GetUserBorrows(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	GetActiveBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	GetOverdueBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
 	CalculateFine(borrowID uint) (int, error)
 }
 
@@ -123,7 +123,7 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 	return borrowRecord, nil
 }
 
-func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error) {
+func (s *borrowService) ReturnBook(userID uint, role string, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error) {
 	var borrowRecord *models.BorrowRecord
 	var fine int
 	var err error
@@ -136,7 +136,11 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 			return apperror.NotFound("borrow record")
 		}
 
-		if borrowRecord.UserID != userID {
+		if role == "" {
+			role = string(models.RoleMember)
+		}
+
+		if !canManageBorrowReturn(role) && borrowRecord.UserID != userID {
 			return apperror.Forbidden("not authorized to return this book")
 		}
 
@@ -173,37 +177,20 @@ func (s *borrowService) ReturnBook(userID uint, req dto.ReturnBookRequest) (*mod
 	return borrowRecord, fine, nil
 }
 
-func (s *borrowService) GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
-
-	return s.borrowRepo.ListByUser(userID, page, limit)
+func canManageBorrowReturn(role string) bool {
+	return role == string(models.RoleAdmin) || role == string(models.RoleLibrarian)
 }
 
-func (s *borrowService) GetActiveBorrows(page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
-
-	return s.borrowRepo.ListActive(page, limit)
+func (s *borrowService) GetUserBorrows(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListByUser(userID, page, limit, sort)
 }
 
-func (s *borrowService) GetOverdueBorrows(page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
+func (s *borrowService) GetActiveBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListActive(page, limit, sort)
+}
 
-	return s.borrowRepo.ListOverdue(page, limit)
+func (s *borrowService) GetOverdueBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListOverdue(page, limit, sort)
 }
 
 func (s *borrowService) CalculateFine(borrowID uint) (int, error) {

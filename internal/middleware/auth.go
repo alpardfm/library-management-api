@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/alpardfm/library-management-api/pkg/apperror"
 	"github.com/alpardfm/library-management-api/pkg/auth"
+	httpresponse "github.com/alpardfm/library-management-api/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +17,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		// Get token from Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header required"})
+			httpresponse.Error(c, apperror.Unauthorized("authorization header required"))
 			c.Abort()
 			return
 		}
@@ -23,7 +25,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		// Check Bearer token format
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+			httpresponse.Error(c, apperror.Unauthorized("invalid authorization header format"))
 			c.Abort()
 			return
 		}
@@ -33,7 +35,11 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		// Validate token
 		claims, err := auth.ValidateToken(tokenString, jwtSecret)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			if err == auth.ErrExpiredToken {
+				httpresponse.Error(c, apperror.Unauthorized("token has expired"))
+			} else {
+				httpresponse.Error(c, apperror.Unauthorized("invalid token"))
+			}
 			c.Abort()
 			return
 		}

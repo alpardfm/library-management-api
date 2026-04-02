@@ -3,11 +3,11 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/service"
 	"github.com/alpardfm/library-management-api/pkg/apperror"
+	"github.com/alpardfm/library-management-api/pkg/query"
 	httpresponse "github.com/alpardfm/library-management-api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
@@ -40,6 +40,7 @@ func (h *BorrowHandler) BorrowBook(c *gin.Context) {
 
 func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 	userID := c.GetUint("user_id")
+	role := c.GetString("role")
 
 	var req dto.ReturnBookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -47,7 +48,7 @@ func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 		return
 	}
 
-	borrowRecord, fine, err := h.borrowService.ReturnBook(userID, req)
+	borrowRecord, fine, err := h.borrowService.ReturnBook(userID, role, req)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
@@ -65,52 +66,100 @@ func (h *BorrowHandler) ReturnBook(c *gin.Context) {
 
 func (h *BorrowHandler) GetMyBorrows(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	params, err := query.ParseListParams(c, query.ListOptions{
+		DefaultPage:  1,
+		DefaultLimit: 10,
+		MaxLimit:     50,
+		DefaultSort:  "created_at_desc",
+		AllowedSorts: map[string]string{
+			"created_at_desc": "created_at DESC",
+			"created_at_asc":  "created_at ASC",
+			"due_date_asc":    "due_date ASC",
+			"due_date_desc":   "due_date DESC",
+		},
+	})
+	if err != nil {
+		httpresponse.Error(c, err)
+		return
+	}
 
-	borrows, total, err := h.borrowService.GetUserBorrows(userID, page, limit)
+	borrows, total, err := h.borrowService.GetUserBorrows(userID, params.Page, params.Limit, params.Sort)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
 	}
 
 	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
-		"page":  page,
-		"limit": limit,
-		"total": total,
+		"page":        params.Page,
+		"limit":       params.Limit,
+		"total":       total,
+		"total_pages": query.TotalPages(total, params.Limit),
+		"sort":        params.Sort,
 	})
 }
 
 func (h *BorrowHandler) GetActiveBorrows(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	params, err := query.ParseListParams(c, query.ListOptions{
+		DefaultPage:  1,
+		DefaultLimit: 10,
+		MaxLimit:     50,
+		DefaultSort:  "due_date_asc",
+		AllowedSorts: map[string]string{
+			"created_at_desc": "created_at DESC",
+			"created_at_asc":  "created_at ASC",
+			"due_date_asc":    "due_date ASC",
+			"due_date_desc":   "due_date DESC",
+		},
+	})
+	if err != nil {
+		httpresponse.Error(c, err)
+		return
+	}
 
-	borrows, total, err := h.borrowService.GetActiveBorrows(page, limit)
+	borrows, total, err := h.borrowService.GetActiveBorrows(params.Page, params.Limit, params.Sort)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
 	}
 
 	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
-		"page":  page,
-		"limit": limit,
-		"total": total,
+		"page":        params.Page,
+		"limit":       params.Limit,
+		"total":       total,
+		"total_pages": query.TotalPages(total, params.Limit),
+		"sort":        params.Sort,
 	})
 }
 
 func (h *BorrowHandler) GetOverdueBorrows(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	params, err := query.ParseListParams(c, query.ListOptions{
+		DefaultPage:  1,
+		DefaultLimit: 10,
+		MaxLimit:     50,
+		DefaultSort:  "due_date_asc",
+		AllowedSorts: map[string]string{
+			"created_at_desc": "created_at DESC",
+			"created_at_asc":  "created_at ASC",
+			"due_date_asc":    "due_date ASC",
+			"due_date_desc":   "due_date DESC",
+		},
+	})
+	if err != nil {
+		httpresponse.Error(c, err)
+		return
+	}
 
-	borrows, total, err := h.borrowService.GetOverdueBorrows(page, limit)
+	borrows, total, err := h.borrowService.GetOverdueBorrows(params.Page, params.Limit, params.Sort)
 	if err != nil {
 		httpresponse.Error(c, err)
 		return
 	}
 
 	httpresponse.Success(c, http.StatusOK, "", borrows, gin.H{
-		"page":  page,
-		"limit": limit,
-		"total": total,
+		"page":        params.Page,
+		"limit":       params.Limit,
+		"total":       total,
+		"total_pages": query.TotalPages(total, params.Limit),
+		"sort":        params.Sort,
 	})
 }

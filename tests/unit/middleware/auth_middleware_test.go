@@ -2,10 +2,12 @@
 package middleware_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alpardfm/library-management-api/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
@@ -56,6 +58,39 @@ func TestAuthMiddleware(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("Expired Token", func(t *testing.T) {
+		token, err := auth.GenerateToken(1, "testuser", "member", "test-secret", -1)
+		assert.NoError(t, err)
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+		var response map[string]interface{}
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.Equal(t, false, response["success"])
+		assert.Equal(t, "token has expired", response["message"])
+	})
+
+	t.Run("Invalid Token", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer invalid.token.here")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+		var response map[string]interface{}
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.Equal(t, false, response["success"])
+		assert.Equal(t, "invalid token", response["message"])
 	})
 }
 

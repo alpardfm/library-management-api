@@ -16,9 +16,9 @@ type BorrowRepository interface {
 	FindByIDForUpdate(id uint) (*models.BorrowRecord, error)
 	FindActiveByUserAndBook(userID, bookID uint) (*models.BorrowRecord, error)
 	Update(record *models.BorrowRecord) error
-	ListByUser(userID uint, page, limit int) ([]models.BorrowRecord, int64, error)
-	ListActive(page, limit int) ([]models.BorrowRecord, int64, error)
-	ListOverdue(page, limit int) ([]models.BorrowRecord, int64, error)
+	ListByUser(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	ListActive(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	ListOverdue(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
 	CountActiveByUser(userID uint) (int64, error)
 }
 
@@ -74,7 +74,7 @@ func (r *borrowRepository) Update(record *models.BorrowRecord) error {
 	return r.db.Save(record).Error
 }
 
-func (r *borrowRepository) ListByUser(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {
+func (r *borrowRepository) ListByUser(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
 	var records []models.BorrowRecord
 	var total int64
 
@@ -84,13 +84,13 @@ func (r *borrowRepository) ListByUser(userID uint, page, limit int) ([]models.Bo
 	query.Model(&models.BorrowRecord{}).Count(&total)
 
 	err := query.Offset(offset).Limit(limit).
-		Order("created_at DESC").
+		Order(resolveBorrowSort(sort)).
 		Find(&records).Error
 
 	return records, total, err
 }
 
-func (r *borrowRepository) ListActive(page, limit int) ([]models.BorrowRecord, int64, error) {
+func (r *borrowRepository) ListActive(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
 	var records []models.BorrowRecord
 	var total int64
 
@@ -102,13 +102,13 @@ func (r *borrowRepository) ListActive(page, limit int) ([]models.BorrowRecord, i
 	query.Model(&models.BorrowRecord{}).Count(&total)
 
 	err := query.Offset(offset).Limit(limit).
-		Order("due_date ASC").
+		Order(resolveBorrowSort(sort)).
 		Find(&records).Error
 
 	return records, total, err
 }
 
-func (r *borrowRepository) ListOverdue(page, limit int) ([]models.BorrowRecord, int64, error) {
+func (r *borrowRepository) ListOverdue(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
 	var records []models.BorrowRecord
 	var total int64
 
@@ -122,7 +122,7 @@ func (r *borrowRepository) ListOverdue(page, limit int) ([]models.BorrowRecord, 
 	query.Model(&models.BorrowRecord{}).Count(&total)
 
 	err := query.Offset(offset).Limit(limit).
-		Order("due_date ASC").
+		Order(resolveBorrowSort(sort)).
 		Find(&records).Error
 
 	return records, total, err
@@ -134,4 +134,17 @@ func (r *borrowRepository) CountActiveByUser(userID uint) (int64, error) {
 		Where("user_id = ? AND return_date IS NULL", userID).
 		Count(&count).Error
 	return count, err
+}
+
+func resolveBorrowSort(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "created_at ASC"
+	case "due_date_desc":
+		return "due_date DESC"
+	case "created_at_desc":
+		return "created_at DESC"
+	default:
+		return "due_date ASC"
+	}
 }

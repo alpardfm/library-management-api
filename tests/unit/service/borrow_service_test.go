@@ -65,8 +65,8 @@ func (m *MockBookRepository) Delete(id uint) error {
 	return args.Error(0)
 }
 
-func (m *MockBookRepository) List(page, limit int, search string) ([]models.Book, int64, error) {
-	args := m.Called(page, limit, search)
+func (m *MockBookRepository) List(page, limit int, search, sort string) ([]models.Book, int64, error) {
+	args := m.Called(page, limit, search, sort)
 	return args.Get(0).([]models.Book), args.Get(1).(int64), args.Error(2)
 }
 
@@ -118,18 +118,18 @@ func (m *MockBorrowRepository) Update(record *models.BorrowRecord) error {
 	return args.Error(0)
 }
 
-func (m *MockBorrowRepository) ListByUser(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(userID, page, limit)
+func (m *MockBorrowRepository) ListByUser(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(userID, page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockBorrowRepository) ListActive(page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(page, limit)
+func (m *MockBorrowRepository) ListActive(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockBorrowRepository) ListOverdue(page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(page, limit)
+func (m *MockBorrowRepository) ListOverdue(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
@@ -321,7 +321,7 @@ func TestBorrowService_ReturnBook_Success(t *testing.T) {
 		Once()
 	sqlMock.ExpectCommit()
 
-	returnedRecord, fine, err := borrowService.ReturnBook(userID, req)
+	returnedRecord, fine, err := borrowService.ReturnBook(userID, "member", req)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, returnedRecord)
@@ -348,12 +348,46 @@ func TestBorrowService_ReturnBook_NotOwner_RollsBack(t *testing.T) {
 	mockBorrowRepo.On("FindByIDForUpdate", uint(1)).Return(borrowRecord, nil).Once()
 	sqlMock.ExpectRollback()
 
-	returnedRecord, fine, err := borrowService.ReturnBook(1, req)
+	returnedRecord, fine, err := borrowService.ReturnBook(1, "member", req)
 
 	assert.Error(t, err)
 	assert.Nil(t, returnedRecord)
 	assert.Equal(t, 0, fine)
 	assert.Equal(t, "not authorized to return this book", err.Error())
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+func TestBorrowService_ReturnBook_AdminCanReturnOtherUserBook(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, _, sqlMock, borrowService := newBorrowService(t)
+
+	req := dto.ReturnBookRequest{BorrowRecordID: 1}
+	now := time.Now()
+	borrowRecord := &models.BorrowRecord{
+		ID:         1,
+		UserID:     99,
+		BookID:     1,
+		BorrowDate: now.Add(-2 * 24 * time.Hour),
+		DueDate:    now.Add(5 * 24 * time.Hour),
+		Status:     models.StatusBorrowed,
+	}
+	book := &models.Book{ID: 1, TotalCopies: 5, AvailableCopies: 2}
+
+	sqlMock.ExpectBegin()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockBorrowRepo.On("FindByIDForUpdate", uint(1)).Return(borrowRecord, nil).Once()
+	mockBookRepo.On("FindByIDForUpdate", uint(1)).Return(book, nil).Once()
+	mockBookRepo.On("Update", mock.AnythingOfType("*models.Book")).Return(nil).Once()
+	mockBorrowRepo.On("Update", mock.AnythingOfType("*models.BorrowRecord")).Return(nil).Once()
+	sqlMock.ExpectCommit()
+
+	returnedRecord, fine, err := borrowService.ReturnBook(1, "admin", req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, returnedRecord)
+	assert.Equal(t, 0, fine)
 	mockBookRepo.AssertExpectations(t)
 	mockBorrowRepo.AssertExpectations(t)
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
@@ -383,7 +417,7 @@ func TestBorrowService_BorrowBook_TransactionError_RollsBack(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, borrowRecord)
-	assert.Contains(t, err.Error(), "insert failed")
+	assert.Equal(t, "failed to create borrow record", err.Error())
 	mockUserRepo.AssertExpectations(t)
 	mockBookRepo.AssertExpectations(t)
 	mockBorrowRepo.AssertExpectations(t)
