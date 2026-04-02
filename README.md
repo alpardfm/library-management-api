@@ -356,6 +356,35 @@ CREATE TABLE borrow_records (
 - Semua raw SQL migration di atas dibuat idempotent dan aman di-rerun dengan `IF NOT EXISTS` atau guard `DO $$ ... IF NOT EXISTS ... $$`.
 - App selalu mencoba mengaktifkan `pg_trgm` secara graceful. Jika `CREATE EXTENSION` gagal karena privilege di managed PostgreSQL, aplikasi hanya menulis warning dan tetap lanjut boot tanpa trigram index.
 
+### **CI Quality Gates**
+
+- GitHub Actions workflow utama ada di `.github/workflows/quality-gates.yml`.
+- PR ke `master` otomatis menjalankan quality feedback wajib:
+  - `lint`
+  - `unit-test`
+- Push ke `master` dan `dev` juga menjalankan workflow yang sama untuk validasi branch.
+- Integration test disediakan sebagai job opsional `integration-test` lewat `workflow_dispatch`, memakai PostgreSQL service container.
+- Untuk branch protection GitHub, tandai status check `lint` dan `unit-test` sebagai required checks di PR.
+
+### **Run CI Locally**
+
+```bash
+# Lint
+golangci-lint run --timeout=5m
+
+# Unit test
+go test ./tests/unit/... -v
+
+# Optional integration test
+DB_HOST=localhost \
+DB_PORT=5432 \
+DB_USER=postgres \
+DB_PASSWORD=password \
+DB_NAME=library_test \
+DB_SSLMODE=disable \
+go test ./tests/integration/... -v
+```
+
 ### **E2E Preconditions**
 
 - Server API harus sudah running dan bisa diakses.
