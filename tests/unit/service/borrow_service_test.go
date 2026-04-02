@@ -393,6 +393,42 @@ func TestBorrowService_ReturnBook_AdminCanReturnOtherUserBook(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 }
 
+func TestBorrowService_ReturnBook_StockAlreadyFull_RollsBack(t *testing.T) {
+	mockBorrowRepo, mockBookRepo, _, sqlMock, borrowService := newBorrowService(t)
+
+	req := dto.ReturnBookRequest{BorrowRecordID: 1}
+	borrowRecord := &models.BorrowRecord{
+		ID:     1,
+		UserID: 1,
+		BookID: 1,
+		Status: models.StatusBorrowed,
+	}
+	book := &models.Book{
+		ID:              1,
+		TotalCopies:     3,
+		AvailableCopies: 3,
+	}
+
+	sqlMock.ExpectBegin()
+	mockBookRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBookRepo).Once()
+	mockBorrowRepo.On("WithTx", mock.AnythingOfType("*gorm.DB")).Return(mockBorrowRepo).Once()
+	mockBorrowRepo.On("FindByIDForUpdate", uint(1)).Return(borrowRecord, nil).Once()
+	mockBookRepo.On("FindByIDForUpdate", uint(1)).Return(book, nil).Once()
+	sqlMock.ExpectRollback()
+
+	returnedRecord, fine, err := borrowService.ReturnBook(1, "member", req)
+
+	assert.Error(t, err)
+	assert.Nil(t, returnedRecord)
+	assert.Equal(t, 0, fine)
+	assert.Equal(t, "book stock is already full, cannot process return", err.Error())
+	mockBookRepo.AssertExpectations(t)
+	mockBorrowRepo.AssertExpectations(t)
+	mockBookRepo.AssertNotCalled(t, "Update", mock.Anything)
+	mockBorrowRepo.AssertNotCalled(t, "Update", mock.Anything)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
 func TestBorrowService_BorrowBook_TransactionError_RollsBack(t *testing.T) {
 	mockBorrowRepo, mockBookRepo, mockUserRepo, sqlMock, borrowService := newBorrowService(t)
 

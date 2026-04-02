@@ -42,6 +42,10 @@ func (s *bookService) CreateBook(req dto.CreateBookRequest) (*models.Book, error
 		AvailableCopies: req.TotalCopies,
 	}
 
+	if err := validateBookStock(book); err != nil {
+		return nil, err
+	}
+
 	if err := s.bookRepo.Create(book); err != nil {
 		return nil, apperror.Internal("failed to create book", err)
 	}
@@ -63,6 +67,10 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 		return nil, apperror.NotFound("book")
 	}
 
+	if err := validateBookStock(book); err != nil {
+		return nil, err
+	}
+
 	if req.Title != "" {
 		book.Title = req.Title
 	}
@@ -82,13 +90,17 @@ func (s *bookService) UpdateBook(id uint, req dto.UpdateBookRequest) (*models.Bo
 		book.Description = req.Description
 	}
 	if req.TotalCopies > 0 {
-		diff := req.TotalCopies - book.TotalCopies
-		book.TotalCopies = req.TotalCopies
-		book.AvailableCopies += diff
-
-		if book.AvailableCopies < 0 {
-			book.AvailableCopies = 0
+		borrowedCopies := book.TotalCopies - book.AvailableCopies
+		if req.TotalCopies < borrowedCopies {
+			return nil, apperror.Conflict("total copies cannot be less than borrowed copies")
 		}
+
+		book.TotalCopies = req.TotalCopies
+		book.AvailableCopies = req.TotalCopies - borrowedCopies
+	}
+
+	if err := validateBookStock(book); err != nil {
+		return nil, err
 	}
 
 	if err := s.bookRepo.Update(book); err != nil {
@@ -124,5 +136,23 @@ func (s *bookService) CheckAvailability(id uint) (bool, error) {
 		return false, apperror.NotFound("book")
 	}
 
+	if err := validateBookStock(book); err != nil {
+		return false, err
+	}
+
 	return book.CanBorrow(), nil
+}
+
+func validateBookStock(book *models.Book) error {
+	if book.TotalCopies < 1 {
+		return apperror.Internal("book stock is inconsistent", nil)
+	}
+	if book.AvailableCopies < 0 {
+		return apperror.Internal("book stock is inconsistent", nil)
+	}
+	if book.AvailableCopies > book.TotalCopies {
+		return apperror.Internal("book stock is inconsistent", nil)
+	}
+
+	return nil
 }

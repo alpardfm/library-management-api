@@ -78,6 +78,9 @@ func (s *borrowService) BorrowBook(userID uint, req dto.BorrowBookRequest) (*mod
 		if err != nil {
 			return apperror.NotFound("book")
 		}
+		if err := validateBookStock(book); err != nil {
+			return err
+		}
 
 		if !book.CanBorrow() {
 			return apperror.Conflict("book is not available for borrowing")
@@ -151,6 +154,12 @@ func (s *borrowService) ReturnBook(userID uint, role string, req dto.ReturnBookR
 		book, err := bookRepoTx.FindByIDForUpdate(borrowRecord.BookID)
 		if err != nil {
 			return apperror.NotFound("book")
+		}
+		if err := validateBookStock(book); err != nil {
+			return err
+		}
+		if book.AvailableCopies >= book.TotalCopies {
+			return apperror.Conflict("book stock is already full, cannot process return")
 		}
 
 		fine = borrowRecord.CalculateFine(s.config.FinePerDay)
