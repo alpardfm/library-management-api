@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alpardfm/library-management-api/internal/models"
@@ -91,49 +92,119 @@ func AutoMigrate(db *gorm.DB) error {
 		return nil
 	}
 
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1
-				FROM pg_constraint
-				WHERE conname = 'available_copies_non_negative'
-			) THEN
-				ALTER TABLE books
-				ADD CONSTRAINT available_copies_non_negative
-				CHECK (available_copies >= 0);
-			END IF;
-		END $$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create non-negative stock constraint: %w", err)
-	}
+	return applyPostgresMigrations(db)
+}
 
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1
-				FROM pg_constraint
-				WHERE conname = 'available_copies_not_exceed_total'
-			) THEN
-				ALTER TABLE books
-				ADD CONSTRAINT available_copies_not_exceed_total
-				CHECK (available_copies <= total_copies);
-			END IF;
-		END $$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create max stock constraint: %w", err)
-	}
+type postgresMigration struct {
+	name      string
+	statement string
+}
 
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
-		ON borrow_records (user_id, book_id)
-		WHERE return_date IS NULL
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create active borrow unique index: %w", err)
+func applyPostgresMigrations(db *gorm.DB) error {
+	for _, migration := range postgresMigrations() {
+		if err := db.Exec(normalizeSQL(migration.statement)).Error; err != nil {
+			return fmt.Errorf("failed to apply %s: %w", migration.name, err)
+		}
 	}
 
 	return nil
+}
+
+func postgresMigrations() []postgresMigration {
+	return []postgresMigration{
+		{
+			name: "pg_trgm extension",
+			statement: `
+				CREATE EXTENSION IF NOT EXISTS pg_trgm
+			`,
+		},
+		{
+			name: "available copies non-negative constraint",
+			statement: `
+				DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT 1
+						FROM pg_constraint
+						WHERE conname = 'available_copies_non_negative'
+					) THEN
+						ALTER TABLE books
+						ADD CONSTRAINT available_copies_non_negative
+						CHECK (available_copies >= 0);
+					END IF;
+				END $$;
+			`,
+		},
+		{
+			name: "available copies max constraint",
+			statement: `
+				DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT 1
+						FROM pg_constraint
+						WHERE conname = 'available_copies_not_exceed_total'
+					) THEN
+						ALTER TABLE books
+						ADD CONSTRAINT available_copies_not_exceed_total
+						CHECK (available_copies <= total_copies);
+					END IF;
+				END $$;
+			`,
+		},
+		{
+			name: "books title trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_title_trgm
+				ON books
+				USING gin (title gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books author trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_author_trgm
+				ON books
+				USING gin (author gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books isbn trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_isbn_trgm
+				ON books
+				USING gin (isbn gin_trgm_ops)
+			`,
+		},
+		{
+			name: "active borrow unique index",
+			statement: `
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
+				ON borrow_records (user_id, book_id)
+				WHERE return_date IS NULL
+			`,
+		},
+		{
+			name: "active borrow due date index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_borrow_records_active_due_date
+				ON borrow_records (due_date)
+				WHERE return_date IS NULL
+			`,
+		},
+		{
+			name: "active borrow user created index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_borrow_records_active_user_created_at
+				ON borrow_records (user_id, created_at DESC)
+				WHERE return_date IS NULL
+			`,
+		},
+	}
+}
+
+func normalizeSQL(sql string) string {
+	return strings.TrimSpace(sql)
 }
 
 func getEnv(key, defaultValue string) string {
