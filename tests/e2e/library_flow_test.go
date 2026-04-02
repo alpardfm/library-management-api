@@ -4,11 +4,14 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/alpardfm/library-management-api/internal/dto"
@@ -17,13 +20,19 @@ import (
 type LibraryE2ETestSuite struct {
 	suite.Suite
 	baseURL string
+	client  *http.Client
 	token   string
 	userID  uint
-	bookID  uint
 }
 
 func (suite *LibraryE2ETestSuite) SetupSuite() {
-	suite.baseURL = "http://localhost:8080/api/v1"
+	baseURL := os.Getenv("E2E_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+
+	suite.baseURL = baseURL
+	suite.client = &http.Client{Timeout: 10 * time.Second}
 
 	// Wait for server to be ready
 	suite.waitForServer()
@@ -32,79 +41,94 @@ func (suite *LibraryE2ETestSuite) SetupSuite() {
 func (suite *LibraryE2ETestSuite) waitForServer() {
 	maxRetries := 30
 	for i := 0; i < maxRetries; i++ {
-		resp, err := http.Get(suite.baseURL + "/health")
+		resp, err := suite.client.Get(suite.baseURL + "/health")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
 			return
 		}
 		time.Sleep(1 * time.Second)
 	}
-	suite.T().Skipf("skipping e2e test: server not ready at %s after %d seconds", suite.baseURL, maxRetries)
+	suite.T().Skipf("skipping e2e test: server not ready at %s/health after %d seconds", suite.baseURL, maxRetries)
 }
 
 func (suite *LibraryE2ETestSuite) TestCompleteLibraryFlow() {
+	suffix := time.Now().UnixNano()
+	username := fmt.Sprintf("e2euser-%d", suffix)
+	email := fmt.Sprintf("e2e-%d@example.com", suffix)
+	apiBaseURL := suite.baseURL + "/api/v1"
+
 	suite.T().Run("1. Register User", func(t *testing.T) {
 		reqBody := dto.RegisterRequest{
-			Username: "e2euser",
-			Email:    "e2e@example.com",
+			Username: username,
+			Email:    email,
 			Password: "password123",
 		}
 
 		jsonBody, _ := json.Marshal(reqBody)
-		resp, err := http.Post(suite.baseURL+"/auth/register", "application/json", bytes.NewBuffer(jsonBody))
+		resp, err := suite.client.Post(apiBaseURL+"/auth/register", "application/json", bytes.NewBuffer(jsonBody))
 
 		assert.NoError(t, err)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 		var response map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&response)
-		resp.Body.Close()
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
 
+		assert.Equal(t, true, response["success"])
 		assert.Equal(t, "User registered successfully", response["message"])
+		assert.NotNil(t, response["data"])
 	})
 
 	suite.T().Run("2. Login", func(t *testing.T) {
 		reqBody := dto.LoginRequest{
-			Username: "e2euser",
+			Username: username,
 			Password: "password123",
 		}
 
 		jsonBody, _ := json.Marshal(reqBody)
-		resp, err := http.Post(suite.baseURL+"/auth/login", "application/json", bytes.NewBuffer(jsonBody))
+		resp, err := suite.client.Post(apiBaseURL+"/auth/login", "application/json", bytes.NewBuffer(jsonBody))
 
 		assert.NoError(t, err)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var response map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&response)
-		resp.Body.Close()
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
 
-		assert.NotNil(t, response["token"])
-		suite.token = response["token"].(string)
+		assert.Equal(t, true, response["success"])
+		data := response["data"].(map[string]interface{})
+		assert.NotNil(t, data["token"])
+		suite.token = data["token"].(string)
 
-		userData := response["user"].(map[string]interface{})
+		userData := data["user"].(map[string]interface{})
 		suite.userID = uint(userData["id"].(float64))
 	})
 
 	suite.T().Run("3. List Books", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", suite.baseURL+"/books", nil)
+		req, _ := http.NewRequest("GET", apiBaseURL+"/books", nil)
 		req.Header.Set("Authorization", "Bearer "+suite.token)
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
+		resp, err := suite.client.Do(req)
 
 		assert.NoError(t, err)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var response map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&response)
-		resp.Body.Close()
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
 
+		assert.Equal(t, true, response["success"])
 		assert.NotNil(t, response["data"])
+		assert.NotNil(t, response["meta"])
+		meta := response["meta"].(map[string]interface{})
+		assert.NotNil(t, meta["page"])
+		assert.NotNil(t, meta["limit"])
+		assert.NotNil(t, meta["total"])
+		assert.NotNil(t, meta["total_pages"])
 	})
-
-	// Note: For admin operations, we would need admin token
-	// This shows the complete flow structure
 }
 
 func TestLibraryE2ETestSuite(t *testing.T) {

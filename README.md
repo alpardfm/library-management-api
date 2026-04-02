@@ -347,6 +347,7 @@ CREATE TABLE borrow_records (
 - Unit test `service` dan `repository` tetap memakai mock/`sqlmock`.
 - Concurrency hardening untuk borrow flow dibuktikan lewat integration test Postgres nyata di [`tests/integration/borrow_concurrency_test.go`](https://github.com/alpardfm/library-management-api/tests/integration/borrow_concurrency_test.go).
 - Integration test akan skip dengan pesan yang jelas saat database test atau server E2E tidak tersedia, sehingga failure env lebih mudah dibedakan dari regression aplikasi.
+- Happy-path E2E saat ini men-cover `register -> login -> list books` dan memakai username/email unik per run supaya aman dijalankan ulang tanpa bentrok data lama.
 - Constraint/index invariant yang dibuat di `AutoMigrate` memakai SQL Postgres-specific. Saat dialector bukan `postgres`, raw SQL invariant tersebut di-skip agar test environment non-Postgres tidak gagal palsu.
 - `AutoMigrate` juga menambahkan index support untuk query utama:
   - trigram GIN index untuk pencarian buku di `title`, `author`, dan `isbn` jika extension `pg_trgm` berhasil diaktifkan
@@ -354,6 +355,26 @@ CREATE TABLE borrow_records (
   - partial index tambahan untuk active borrow list/count berbasis `due_date` dan `user_id`
 - Semua raw SQL migration di atas dibuat idempotent dan aman di-rerun dengan `IF NOT EXISTS` atau guard `DO $$ ... IF NOT EXISTS ... $$`.
 - App selalu mencoba mengaktifkan `pg_trgm` secara graceful. Jika `CREATE EXTENSION` gagal karena privilege di managed PostgreSQL, aplikasi hanya menulis warning dan tetap lanjut boot tanpa trigram index.
+
+### **E2E Preconditions**
+
+- Server API harus sudah running dan bisa diakses.
+- Endpoint health harus aktif di `GET /health`.
+- Database dan environment aplikasi harus sudah siap, karena E2E tidak mem-boot app sendiri.
+- Default base URL E2E adalah `http://localhost:8080`. Jika beda, set `E2E_BASE_URL`.
+
+### **Run E2E**
+
+```bash
+# 1. Pastikan app dan database sudah jalan
+go run cmd/api/main.go
+
+# 2. Jalankan 1 happy-path E2E
+go test ./tests/e2e -run TestLibraryE2ETestSuite -v
+
+# 3. Jika server tidak di localhost:8080
+E2E_BASE_URL=http://localhost:8081 go test ./tests/e2e -run TestLibraryE2ETestSuite -v
+```
 
 ## **🚀 Deployment**
 
