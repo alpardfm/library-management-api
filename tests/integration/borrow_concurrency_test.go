@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"os"
 	"sync"
 	"testing"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/alpardfm/library-management-api/internal/models"
 	"github.com/alpardfm/library-management-api/internal/repository"
 	"github.com/alpardfm/library-management-api/internal/service"
-	"github.com/alpardfm/library-management-api/pkg/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -18,31 +16,8 @@ import (
 func setupBorrowConcurrencyTest(t *testing.T, cfg service.BorrowServiceConfig) (*gorm.DB, service.BorrowService) {
 	t.Helper()
 
-	if testing.Short() {
-		t.Skip("skipping concurrency integration test in short mode")
-	}
-
-	os.Setenv("DB_NAME", "library_test")
-	os.Setenv("DB_SSLMODE", "disable")
-
-	db, err := database.Connect()
-	if err != nil {
-		t.Skipf("skipping concurrency integration test: cannot connect to postgres test db: %v", err)
-	}
-
-	require.NoError(t, database.AutoMigrate(db))
-
-	t.Cleanup(func() {
-		db.Exec("DELETE FROM borrow_records")
-		db.Exec("DELETE FROM books")
-		db.Exec("DELETE FROM users")
-		sqlDB, _ := db.DB()
-		_ = sqlDB.Close()
-	})
-
-	db.Exec("DELETE FROM borrow_records")
-	db.Exec("DELETE FROM books")
-	db.Exec("DELETE FROM users")
+	db, cleanup := setupIntegrationTestDB(t)
+	t.Cleanup(cleanup)
 
 	userRepo := repository.NewUserRepository(db)
 	bookRepo := repository.NewBookRepository(db)

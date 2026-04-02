@@ -8,26 +8,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/alpardfm/library-management-api/pkg/database"
-
 	"github.com/alpardfm/library-management-api/internal/dto"
-
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 )
 
 func TestAuthIntegration(t *testing.T) {
-	// Setup test database
-	db, err := setupTestDB()
-	assert.NoError(t, err)
-	defer cleanupTestDB(db)
+	db, cleanup := setupIntegrationTestDB(t)
+	defer cleanup()
 
-	// Setup router
-	gin.SetMode(gin.TestMode)
-	router := setupTestRouter(db)
+	router := setupIntegrationRouter(db)
 
 	t.Run("Register new user", func(t *testing.T) {
+		assert.NoError(t, resetIntegrationTestDB(db))
+
 		reqBody := dto.RegisterRequest{
 			Username: "testuser",
 			Email:    "test@example.com",
@@ -51,6 +44,22 @@ func TestAuthIntegration(t *testing.T) {
 	})
 
 	t.Run("Login with registered user", func(t *testing.T) {
+		assert.NoError(t, resetIntegrationTestDB(db))
+
+		registerBody := dto.RegisterRequest{
+			Username: "testuser",
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+
+		registerJSON, _ := json.Marshal(registerBody)
+		registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerJSON))
+		registerReq.Header.Set("Content-Type", "application/json")
+
+		registerW := httptest.NewRecorder()
+		router.ServeHTTP(registerW, registerReq)
+		assert.Equal(t, http.StatusCreated, registerW.Code)
+
 		reqBody := dto.LoginRequest{
 			Username: "testuser",
 			Password: "password123",
@@ -68,26 +77,8 @@ func TestAuthIntegration(t *testing.T) {
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 
-		assert.NotEmpty(t, response["token"])
-		assert.NotNil(t, response["user"])
+		data := response["data"].(map[string]interface{})
+		assert.NotEmpty(t, data["token"])
+		assert.NotNil(t, data["user"])
 	})
-}
-
-func setupTestDB() (*gorm.DB, error) {
-	// Use SQLite for testing
-	// Or connect to test PostgreSQL instance
-	return database.Connect()
-}
-
-func cleanupTestDB(db *gorm.DB) {
-	// Clean up test data
-	db.Exec("DELETE FROM users")
-	db.Exec("DELETE FROM books")
-	db.Exec("DELETE FROM borrow_records")
-}
-
-func setupTestRouter(db *gorm.DB) *gin.Engine {
-	// Initialize app with test database
-	// Similar to main() but with test config
-	return nil // Return configured router
 }

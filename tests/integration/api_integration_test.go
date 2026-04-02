@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/alpardfm/library-management-api/internal/dto"
 	"github.com/alpardfm/library-management-api/internal/models"
-	"github.com/alpardfm/library-management-api/pkg/database"
 )
 
 type APIIntegrationTestSuite struct {
@@ -28,23 +26,9 @@ type APIIntegrationTestSuite struct {
 }
 
 func (suite *APIIntegrationTestSuite) SetupSuite() {
-	// Setup test database
-	os.Setenv("DB_NAME", "library_test")
-	os.Setenv("DB_SSLMODE", "disable")
-
-	var err error
-	suite.db, err = database.Connect()
-	if err != nil {
-		suite.T().Fatalf("Failed to connect to database: %v", err)
-	}
-
-	// Clean database
-	suite.cleanDatabase()
-
-	// Run migrations
-	if err := database.AutoMigrate(suite.db); err != nil {
-		suite.T().Fatalf("Failed to migrate database: %v", err)
-	}
+	db, cleanup := setupIntegrationTestDB(suite.T())
+	suite.db = db
+	suite.T().Cleanup(cleanup)
 
 	// Setup router (simplified version)
 	gin.SetMode(gin.TestMode)
@@ -52,21 +36,19 @@ func (suite *APIIntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *APIIntegrationTestSuite) TearDownSuite() {
-	if suite.db != nil {
-		sqlDB, _ := suite.db.DB()
-		sqlDB.Close()
-	}
 }
 
 func (suite *APIIntegrationTestSuite) SetupTest() {
-	suite.cleanDatabase()
+	if suite.db == nil {
+		suite.T().Skip("integration test database is unavailable")
+	}
+
+	suite.Require().NoError(resetIntegrationTestDB(suite.db))
 	suite.setupTestData()
 }
 
 func (suite *APIIntegrationTestSuite) cleanDatabase() {
-	suite.db.Exec("DELETE FROM borrow_records")
-	suite.db.Exec("DELETE FROM books")
-	suite.db.Exec("DELETE FROM users")
+	suite.Require().NoError(resetIntegrationTestDB(suite.db))
 }
 
 func (suite *APIIntegrationTestSuite) setupTestData() {
