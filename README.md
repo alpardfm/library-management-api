@@ -199,6 +199,28 @@ Response:
 
 ```
 
+### **List Query Parameters**
+
+- `page`: default `1`, harus integer positif
+- `limit`: default `10`, di-clamp sesuai endpoint
+- `search`: optional, dipakai untuk endpoint yang mendukung pencarian
+- `sort`: optional, harus salah satu value yang diizinkan endpoint
+
+### **List Meta Response**
+
+```json
+{
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "total_pages": 5,
+    "sort": "created_at_desc",
+    "search": "golang"
+  }
+}
+```
+
 ### **Return Policy**
 
 - `member` hanya boleh melakukan return untuk borrow record miliknya sendiri.

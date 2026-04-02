@@ -46,7 +46,6 @@ func TestUserRepository_Create(t *testing.T) {
 			user.IsActive,
 			sqlmock.AnyArg(), // created_at
 			sqlmock.AnyArg(), // updated_at
-			sqlmock.AnyArg(), // id
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
@@ -74,8 +73,8 @@ func TestUserRepository_FindByID(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "username", "email", "password_hash", "role", "is_active", "created_at", "updated_at"}).
 		AddRow(1, "testuser", "test@example.com", "hashed_password", "member", true, time.Now(), time.Now())
 
-	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" = \$1`).
-		WithArgs(1).
+	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" = \$1 ORDER BY "users"\."id" LIMIT \$2`).
+		WithArgs(1, 1).
 		WillReturnRows(rows)
 
 	user, err := repo.FindByID(1)
@@ -100,8 +99,8 @@ func TestUserRepository_FindByID_NotFound(t *testing.T) {
 	repo := repository.NewUserRepository(gormDB)
 
 	// Mock empty result
-	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" = \$1`).
-		WithArgs(999).
+	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" = \$1 ORDER BY "users"\."id" LIMIT \$2`).
+		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	user, err := repo.FindByID(999)
@@ -127,8 +126,8 @@ func TestUserRepository_FindByUsername(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "username", "email"}).
 		AddRow(1, "john_doe", "john@example.com")
 
-	mock.ExpectQuery(`SELECT \* FROM "users" WHERE username = \$1`).
-		WithArgs("john_doe").
+	mock.ExpectQuery(`SELECT \* FROM "users" WHERE username = \$1 ORDER BY "users"\."id" LIMIT \$2`).
+		WithArgs("john_doe", 1).
 		WillReturnRows(rows)
 
 	user, err := repo.FindByUsername("john_doe")
@@ -161,7 +160,8 @@ func TestUserRepository_List(t *testing.T) {
 		AddRow(1, "user1", "user1@example.com").
 		AddRow(2, "user2", "user2@example.com")
 
-	mock.ExpectQuery(`SELECT \* FROM "users"`).
+	mock.ExpectQuery(`SELECT \* FROM "users" LIMIT \$1`).
+		WithArgs(10).
 		WillReturnRows(rows)
 
 	users, total, err := repo.List(1, 10)

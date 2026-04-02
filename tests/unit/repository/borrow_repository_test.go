@@ -105,7 +105,7 @@ func TestBorrowRepository_ListOverdue(t *testing.T) {
 	mock.ExpectQuery(`SELECT \* FROM "users" WHERE "users"."id" IN \(\$1,\$2\)`).
 		WillReturnRows(userRows)
 
-	records, total, err := repo.ListOverdue(1, 10)
+	records, total, err := repo.ListOverdue(1, 10, "due_date_asc")
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(2), total)

@@ -16,7 +16,7 @@ type BookRepository interface {
 	FindByISBN(isbn string) (*models.Book, error)
 	Update(book *models.Book) error
 	Delete(id uint) error
-	List(page, limit int, search string) ([]models.Book, int64, error)
+	List(page, limit int, search, sort string) ([]models.Book, int64, error)
 	UpdateAvailableCopies(id uint, change int) error
 }
 
@@ -71,7 +71,7 @@ func (r *bookRepository) Delete(id uint) error {
 	return r.db.Delete(&models.Book{}, id).Error
 }
 
-func (r *bookRepository) List(page, limit int, search string) ([]models.Book, int64, error) {
+func (r *bookRepository) List(page, limit int, search, sort string) ([]models.Book, int64, error) {
 	var books []models.Book
 	var total int64
 
@@ -89,9 +89,22 @@ func (r *bookRepository) List(page, limit int, search string) ([]models.Book, in
 	query.Count(&total)
 
 	// Get paginated results
-	err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&books).Error
+	err := query.Offset(offset).Limit(limit).Order(resolveBookSort(sort)).Find(&books).Error
 
 	return books, total, err
+}
+
+func resolveBookSort(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "created_at ASC"
+	case "title_asc":
+		return "title ASC"
+	case "title_desc":
+		return "title DESC"
+	default:
+		return "created_at DESC"
+	}
 }
 
 func (r *bookRepository) UpdateAvailableCopies(id uint, change int) error {

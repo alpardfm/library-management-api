@@ -14,9 +14,9 @@ import (
 type BorrowService interface {
 	BorrowBook(userID uint, req dto.BorrowBookRequest) (*models.BorrowRecord, error)
 	ReturnBook(userID uint, role string, req dto.ReturnBookRequest) (*models.BorrowRecord, int, error)
-	GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error)
-	GetActiveBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
-	GetOverdueBorrows(page, limit int) ([]models.BorrowRecord, int64, error)
+	GetUserBorrows(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	GetActiveBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
+	GetOverdueBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error)
 	CalculateFine(borrowID uint) (int, error)
 }
 
@@ -181,37 +181,16 @@ func canManageBorrowReturn(role string) bool {
 	return role == string(models.RoleAdmin) || role == string(models.RoleLibrarian)
 }
 
-func (s *borrowService) GetUserBorrows(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
-
-	return s.borrowRepo.ListByUser(userID, page, limit)
+func (s *borrowService) GetUserBorrows(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListByUser(userID, page, limit, sort)
 }
 
-func (s *borrowService) GetActiveBorrows(page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
-
-	return s.borrowRepo.ListActive(page, limit)
+func (s *borrowService) GetActiveBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListActive(page, limit, sort)
 }
 
-func (s *borrowService) GetOverdueBorrows(page, limit int) ([]models.BorrowRecord, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 50 {
-		limit = 10
-	}
-
-	return s.borrowRepo.ListOverdue(page, limit)
+func (s *borrowService) GetOverdueBorrows(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	return s.borrowRepo.ListOverdue(page, limit, sort)
 }
 
 func (s *borrowService) CalculateFine(borrowID uint) (int, error) {

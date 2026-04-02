@@ -65,8 +65,8 @@ func (m *MockBookRepository) Delete(id uint) error {
 	return args.Error(0)
 }
 
-func (m *MockBookRepository) List(page, limit int, search string) ([]models.Book, int64, error) {
-	args := m.Called(page, limit, search)
+func (m *MockBookRepository) List(page, limit int, search, sort string) ([]models.Book, int64, error) {
+	args := m.Called(page, limit, search, sort)
 	return args.Get(0).([]models.Book), args.Get(1).(int64), args.Error(2)
 }
 
@@ -118,18 +118,18 @@ func (m *MockBorrowRepository) Update(record *models.BorrowRecord) error {
 	return args.Error(0)
 }
 
-func (m *MockBorrowRepository) ListByUser(userID uint, page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(userID, page, limit)
+func (m *MockBorrowRepository) ListByUser(userID uint, page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(userID, page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockBorrowRepository) ListActive(page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(page, limit)
+func (m *MockBorrowRepository) ListActive(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockBorrowRepository) ListOverdue(page, limit int) ([]models.BorrowRecord, int64, error) {
-	args := m.Called(page, limit)
+func (m *MockBorrowRepository) ListOverdue(page, limit int, sort string) ([]models.BorrowRecord, int64, error) {
+	args := m.Called(page, limit, sort)
 	return args.Get(0).([]models.BorrowRecord), args.Get(1).(int64), args.Error(2)
 }
 
@@ -417,7 +417,7 @@ func TestBorrowService_BorrowBook_TransactionError_RollsBack(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, borrowRecord)
-	assert.Contains(t, err.Error(), "insert failed")
+	assert.Equal(t, "failed to create borrow record", err.Error())
 	mockUserRepo.AssertExpectations(t)
 	mockBookRepo.AssertExpectations(t)
 	mockBorrowRepo.AssertExpectations(t)

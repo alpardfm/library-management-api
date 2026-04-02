@@ -49,7 +49,6 @@ func TestBookRepository_Create(t *testing.T) {
 			book.AvailableCopies,
 			sqlmock.AnyArg(), // created_at
 			sqlmock.AnyArg(), // updated_at
-			sqlmock.AnyArg(), // id
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
@@ -74,8 +73,8 @@ func TestBookRepository_UpdateAvailableCopies(t *testing.T) {
 	repo := repository.NewBookRepository(gormDB)
 
 	mock.ExpectBegin()
-	mock.ExpectExec(`UPDATE "books" SET "available_copies" = available_copies \+ \$1 WHERE id = \$2`).
-		WithArgs(-1, 1).
+	mock.ExpectExec(`UPDATE "books" SET "available_copies"=available_copies \+ \$1,"updated_at"=\$2 WHERE id = \$3`).
+		WithArgs(-1, sqlmock.AnyArg(), 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
@@ -99,7 +98,7 @@ func TestBookRepository_ListWithSearch(t *testing.T) {
 
 	// Mock count with search
 	countRows := sqlmock.NewRows([]string{"count"}).AddRow(1)
-	mock.ExpectQuery(`SELECT count\(\*\) FROM "books" WHERE \(title ILIKE \$1 OR author ILIKE \$2 OR isbn ILIKE \$3\)`).
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "books" WHERE title ILIKE \$1 OR author ILIKE \$2 OR isbn ILIKE \$3`).
 		WithArgs("%test%", "%test%", "%test%").
 		WillReturnRows(countRows)
 
@@ -107,11 +106,11 @@ func TestBookRepository_ListWithSearch(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "isbn", "title", "author"}).
 		AddRow(1, "9781234567897", "Test Book", "Test Author")
 
-	mock.ExpectQuery(`SELECT \* FROM "books" WHERE \(title ILIKE \$1 OR author ILIKE \$2 OR isbn ILIKE \$3\) ORDER BY created_at DESC`).
-		WithArgs("%test%", "%test%", "%test%").
+	mock.ExpectQuery(`SELECT \* FROM "books" WHERE title ILIKE \$1 OR author ILIKE \$2 OR isbn ILIKE \$3 ORDER BY created_at DESC`).
+		WithArgs("%test%", "%test%", "%test%", 10).
 		WillReturnRows(rows)
 
-	books, total, err := repo.List(1, 10, "test")
+	books, total, err := repo.List(1, 10, "test", "created_at_desc")
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), total)
