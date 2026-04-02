@@ -101,7 +101,22 @@ type postgresMigration struct {
 }
 
 func applyPostgresMigrations(db *gorm.DB) error {
-	for _, migration := range postgresMigrations() {
+	for _, migration := range basePostgresMigrations() {
+		if err := db.Exec(normalizeSQL(migration.statement)).Error; err != nil {
+			return fmt.Errorf("failed to apply %s: %w", migration.name, err)
+		}
+	}
+
+	if !isPGTrgmEnabled() {
+		return nil
+	}
+
+	if err := db.Exec(normalizeSQL(pgTrgmExtensionMigration().statement)).Error; err != nil {
+		log.Printf("warning: failed to enable pg_trgm extension, skipping trigram indexes: %v", err)
+		return nil
+	}
+
+	for _, migration := range pgTrgmIndexMigrations() {
 		if err := db.Exec(normalizeSQL(migration.statement)).Error; err != nil {
 			return fmt.Errorf("failed to apply %s: %w", migration.name, err)
 		}
@@ -110,14 +125,8 @@ func applyPostgresMigrations(db *gorm.DB) error {
 	return nil
 }
 
-func postgresMigrations() []postgresMigration {
+func basePostgresMigrations() []postgresMigration {
 	return []postgresMigration{
-		{
-			name: "pg_trgm extension",
-			statement: `
-				CREATE EXTENSION IF NOT EXISTS pg_trgm
-			`,
-		},
 		{
 			name: "available copies non-negative constraint",
 			statement: `
@@ -153,30 +162,6 @@ func postgresMigrations() []postgresMigration {
 			`,
 		},
 		{
-			name: "books title trigram index",
-			statement: `
-				CREATE INDEX IF NOT EXISTS idx_books_title_trgm
-				ON books
-				USING gin (title gin_trgm_ops)
-			`,
-		},
-		{
-			name: "books author trigram index",
-			statement: `
-				CREATE INDEX IF NOT EXISTS idx_books_author_trgm
-				ON books
-				USING gin (author gin_trgm_ops)
-			`,
-		},
-		{
-			name: "books isbn trigram index",
-			statement: `
-				CREATE INDEX IF NOT EXISTS idx_books_isbn_trgm
-				ON books
-				USING gin (isbn gin_trgm_ops)
-			`,
-		},
-		{
 			name: "active borrow unique index",
 			statement: `
 				CREATE UNIQUE INDEX IF NOT EXISTS idx_borrow_records_active_user_book
@@ -203,8 +188,57 @@ func postgresMigrations() []postgresMigration {
 	}
 }
 
+func pgTrgmExtensionMigration() postgresMigration {
+	return postgresMigration{
+		name: "pg_trgm extension",
+		statement: `
+			CREATE EXTENSION IF NOT EXISTS pg_trgm
+		`,
+	}
+}
+
+func pgTrgmIndexMigrations() []postgresMigration {
+	return []postgresMigration{
+		{
+			name: "books title trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_title_trgm
+				ON books
+				USING gin (title gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books author trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_author_trgm
+				ON books
+				USING gin (author gin_trgm_ops)
+			`,
+		},
+		{
+			name: "books isbn trigram index",
+			statement: `
+				CREATE INDEX IF NOT EXISTS idx_books_isbn_trgm
+				ON books
+				USING gin (isbn gin_trgm_ops)
+			`,
+		},
+	}
+}
+
+func allPostgresMigrations() []postgresMigration {
+	migrations := append([]postgresMigration{}, basePostgresMigrations()...)
+	migrations = append(migrations, pgTrgmExtensionMigration())
+	migrations = append(migrations, pgTrgmIndexMigrations()...)
+	return migrations
+}
+
 func normalizeSQL(sql string) string {
 	return strings.TrimSpace(sql)
+}
+
+func isPGTrgmEnabled() bool {
+	return getEnvAsBool("ENABLE_PG_TRGM", false)
 }
 
 func getEnv(key, defaultValue string) string {
@@ -212,4 +246,20 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
+	}
+
+	switch strings.ToLower(value) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return defaultValue
+	}
 }

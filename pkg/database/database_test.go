@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -30,7 +31,7 @@ func newMockPostgresDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 }
 
 func TestPostgresMigrations_AreIdempotent(t *testing.T) {
-	migrations := postgresMigrations()
+	migrations := allPostgresMigrations()
 	require.NotEmpty(t, migrations)
 
 	for _, migration := range migrations {
@@ -48,13 +49,55 @@ func TestPostgresMigrations_AreIdempotent(t *testing.T) {
 	}
 }
 
-func TestApplyPostgresMigrations_ExecutesAllStatements(t *testing.T) {
+func TestApplyPostgresMigrations_ExecutesBaseStatements(t *testing.T) {
 	gormDB, mock := newMockPostgresDB(t)
+	t.Setenv("ENABLE_PG_TRGM", "false")
 
-	for _, migration := range postgresMigrations() {
+	for _, migration := range basePostgresMigrations() {
 		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
 			WillReturnResult(sqlmock.NewResult(0, 0))
 	}
+
+	err := applyPostgresMigrations(gormDB)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestApplyPostgresMigrations_ExecutesTrigramStatementsWhenEnabled(t *testing.T) {
+	gormDB, mock := newMockPostgresDB(t)
+	t.Setenv("ENABLE_PG_TRGM", "true")
+
+	for _, migration := range basePostgresMigrations() {
+		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(pgTrgmExtensionMigration().statement))).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	for _, migration := range pgTrgmIndexMigrations() {
+		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+	}
+
+	err := applyPostgresMigrations(gormDB)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestApplyPostgresMigrations_GracefullySkipsTrigramIndexesWhenExtensionFails(t *testing.T) {
+	gormDB, mock := newMockPostgresDB(t)
+	t.Setenv("ENABLE_PG_TRGM", "true")
+
+	for _, migration := range basePostgresMigrations() {
+		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(pgTrgmExtensionMigration().statement))).
+		WillReturnError(errors.New("permission denied to create extension"))
 
 	err := applyPostgresMigrations(gormDB)
 
