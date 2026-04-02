@@ -107,12 +107,7 @@ func applyPostgresMigrations(db *gorm.DB) error {
 		}
 	}
 
-	if !isPGTrgmEnabled() {
-		return nil
-	}
-
-	if err := db.Exec(normalizeSQL(pgTrgmExtensionMigration().statement)).Error; err != nil {
-		log.Printf("warning: failed to enable pg_trgm extension, skipping trigram indexes: %v", err)
+	if !tryEnablePgTrgm(db) {
 		return nil
 	}
 
@@ -237,8 +232,13 @@ func normalizeSQL(sql string) string {
 	return strings.TrimSpace(sql)
 }
 
-func isPGTrgmEnabled() bool {
-	return getEnvAsBool("ENABLE_PG_TRGM", false)
+func tryEnablePgTrgm(db *gorm.DB) bool {
+	if err := db.Exec(normalizeSQL(pgTrgmExtensionMigration().statement)).Error; err != nil {
+		log.Printf("warning: failed to enable pg_trgm extension, skipping trigram indexes: %v", err)
+		return false
+	}
+
+	return true
 }
 
 func getEnv(key, defaultValue string) string {
@@ -246,20 +246,4 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
-}
-
-func getEnvAsBool(key string, defaultValue bool) bool {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return defaultValue
-	}
-
-	switch strings.ToLower(value) {
-	case "1", "true", "yes", "on":
-		return true
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return defaultValue
-	}
 }

@@ -51,12 +51,14 @@ func TestPostgresMigrations_AreIdempotent(t *testing.T) {
 
 func TestApplyPostgresMigrations_ExecutesBaseStatements(t *testing.T) {
 	gormDB, mock := newMockPostgresDB(t)
-	t.Setenv("ENABLE_PG_TRGM", "false")
 
 	for _, migration := range basePostgresMigrations() {
 		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
 			WillReturnResult(sqlmock.NewResult(0, 0))
 	}
+
+	mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(pgTrgmExtensionMigration().statement))).
+		WillReturnError(errors.New("permission denied to create extension"))
 
 	err := applyPostgresMigrations(gormDB)
 
@@ -64,9 +66,8 @@ func TestApplyPostgresMigrations_ExecutesBaseStatements(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestApplyPostgresMigrations_ExecutesTrigramStatementsWhenEnabled(t *testing.T) {
+func TestApplyPostgresMigrations_ExecutesTrigramStatementsWhenExtensionAvailable(t *testing.T) {
 	gormDB, mock := newMockPostgresDB(t)
-	t.Setenv("ENABLE_PG_TRGM", "true")
 
 	for _, migration := range basePostgresMigrations() {
 		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
@@ -89,7 +90,6 @@ func TestApplyPostgresMigrations_ExecutesTrigramStatementsWhenEnabled(t *testing
 
 func TestApplyPostgresMigrations_GracefullySkipsTrigramIndexesWhenExtensionFails(t *testing.T) {
 	gormDB, mock := newMockPostgresDB(t)
-	t.Setenv("ENABLE_PG_TRGM", "true")
 
 	for _, migration := range basePostgresMigrations() {
 		mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(migration.statement))).
@@ -102,5 +102,17 @@ func TestApplyPostgresMigrations_GracefullySkipsTrigramIndexesWhenExtensionFails
 	err := applyPostgresMigrations(gormDB)
 
 	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestTryEnablePgTrgm_ReturnsFalseWhenExtensionFails(t *testing.T) {
+	gormDB, mock := newMockPostgresDB(t)
+
+	mock.ExpectExec(regexp.QuoteMeta(normalizeSQL(pgTrgmExtensionMigration().statement))).
+		WillReturnError(errors.New("permission denied to create extension"))
+
+	enabled := tryEnablePgTrgm(gormDB)
+
+	assert.False(t, enabled)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

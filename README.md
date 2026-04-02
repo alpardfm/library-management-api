@@ -347,11 +347,11 @@ CREATE TABLE borrow_records (
 - Concurrency hardening untuk borrow flow dibuktikan lewat integration test Postgres nyata di [`tests/integration/borrow_concurrency_test.go`](https://github.com/alpardfm/library-management-api/tests/integration/borrow_concurrency_test.go).
 - Constraint/index invariant yang dibuat di `AutoMigrate` memakai SQL Postgres-specific. Saat dialector bukan `postgres`, raw SQL invariant tersebut di-skip agar test environment non-Postgres tidak gagal palsu.
 - `AutoMigrate` juga menambahkan index support untuk query utama:
-  - trigram GIN index untuk pencarian buku di `title`, `author`, dan `isbn` bila `ENABLE_PG_TRGM=true`
+  - trigram GIN index untuk pencarian buku di `title`, `author`, dan `isbn` jika extension `pg_trgm` berhasil diaktifkan
   - partial unique index untuk active borrow lookup `(user_id, book_id) WHERE return_date IS NULL`
   - partial index tambahan untuk active borrow list/count berbasis `due_date` dan `user_id`
 - Semua raw SQL migration di atas dibuat idempotent dan aman di-rerun dengan `IF NOT EXISTS` atau guard `DO $$ ... IF NOT EXISTS ... $$`.
-- `ENABLE_PG_TRGM` default `false` agar app startup tidak gagal di environment PostgreSQL yang tidak mengizinkan `CREATE EXTENSION`. Jika flag diaktifkan tapi pembuatan extension gagal, aplikasi hanya menulis warning dan tetap lanjut boot tanpa trigram index.
+- App selalu mencoba mengaktifkan `pg_trgm` secara graceful. Jika `CREATE EXTENSION` gagal karena privilege di managed PostgreSQL, aplikasi hanya menulis warning dan tetap lanjut boot tanpa trigram index.
 
 ## **🚀 Deployment**
 
